@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Simulator V6 - 爽文人生模拟器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #00d4ff;
+            --primary-dark: #0099cc;
+            --secondary: #9b59b6;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --gold: #ffd700;
+            --epic: #ff6b9d;
+            --legendary: #ff00ff;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-hover: #1a1a25;
+            --border: #2a2a3a;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 50%, #16213e 100%); 
+            color: #e0e0e0; 
+            min-height: 100vh; 
+            line-height: 1.6;
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        
+        h1 { 
+            color: var(--primary); 
+            text-align: center; 
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+        
+        .subtitle { 
+            color: #888; 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        /* ========== 模式选择 ========== */
+        .mode-selection {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 0, 255, 0.1));
+            border: 2px solid var(--gold);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .mode-title {
+            color: var(--gold);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .mode-option {
+            padding: 15px 30px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-card);
+        }
+        
+        .mode-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        .mode-option.selected {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 0, 255, 0.1));
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+        
+        .mode-option h3 {
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .mode-option p {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        
+        .mode-option.selected h3 {
+            color: var(--gold);
+        }
+        
+        /* ========== 按钮样式 ========== */
+        button { 
+            padding: 12px 30px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            color: #000; 
+        }
+        
+        .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4); 
+        }
+        
+        .btn-primary:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed; 
+            transform: none;
+        }
+        
+        .btn-secondary { 
+            background: var(--bg-card); 
+            color: #e0e0e0; 
+            border: 1px solid var(--border); 
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            background: var(--bg-hover);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+            color: #fff;
+        }
+        
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold), #ff8c00);
+            color: #000;
+        }
+        
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+        }
+        
+        .hidden { display: none !important; }
+        
+        /* ========== 世界观选择 ========== */
+        .world-selection { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 15px; 
+            margin: 20px 0; 
+        }
+        
+        .world-card { 
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%); 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            padding: 20px; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .world-card:hover { 
+            border-color: var(--primary); 
+            transform: translateY(-3px); 
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2); 
+        }
+        
+        .world-card.selected { 
+            border-color: var(--primary); 
+            background: linear-gradient(135deg, #0a1a2a 0%, var(--bg-card) 100%); 
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3); 
+        }
+        
+        .world-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .world-icon { 
+            font-size: 2.5rem; 
+            margin-bottom: 10px; 
+        }
+        
+        .world-name { 
+            font-size: 1.2rem; 
+            color: var(--primary); 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+        }
+        
+        .world-desc { 
+            color: #888; 
+            font-size: 0.9rem; 
+            line-height: 1.5; 
+        }
+        
+        .world-category {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .cat-history { background: #8b4513; color: #fff; }
+        .cat-scifi { background: var(--primary); color: #000; }
+        .cat-fantasy { background: var(--secondary); color: #fff; }
+        .cat-magic { background: var(--danger); color: #fff; }
+        .cat-apocalypse { background: #2c3e50; color: #fff; }
+        .cat-modern { background: var(--success); color: #000; }
+        
+        .category-title { 
+            color: var(--primary); 
+            font-size: 1.1rem; 
+            margin: 25px 0 15px 0; 
+            text-align: left; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        /* ========== 角色选择 ========== */
+        .character-selection { margin: 20px 0; }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .character-card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .character-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2);
+        }
+        
+        .character-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #0a1a2a 0%, var(--bg-card) 100%);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+        }
+        
+        .character-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: #000;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .character-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .character-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-right: 15px;
+        }
+        
+        .character-info h3 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+        
+        .character-info span {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .character-background {
+            background: rgba(0, 212, 255, 0.1);
+            border-left: 3px solid var(--primary);
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .character-background h4 {
+            color: var(--primary);
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+        
+        .character-background p {
+            color: #aaa;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        
+        .character-traits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .trait-tag {
+            background: var(--border);
+            color: #ccc;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        
+        .trait-tag.positive {
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success);
+        }
+        
+        .trait-tag.negative {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger);
+        }
+        
+        .trait-tag.neutral {
+            background: rgba(155, 89, 182, 0.2);
+            color: var(--secondary);
+        }
+        
+        /* ========== 属性条 ========== */
+        .attributes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .attribute-item {
+            background: var(--bg-card);
+            padding: 10px 12px;
+            border-radius: 8px;
+        }
+        
+        .attribute-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .attribute-name {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .attribute-value {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .attribute-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .attribute-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: all 0.5s ease;
+        }
+        
+        .attribute-fill.high { background: linear-gradient(90deg, var(--success), #27ae60); }
+        .attribute-fill.medium { background: linear-gradient(90deg, var(--warning), #e67e22); }
+        .attribute-fill.low { background: linear-gradient(90deg, var(--danger), #c0392b); }
+        
+        /* ========== 游戏主界面 ========== */
+        .game-header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .character-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .character-name {
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .character-age {
+            font-size: 1.2rem;
+            color: #fff;
+            background: rgba(0, 212, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        /* 境界显示 */
+        .realm-display {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 0, 255, 0.1));
+            border: 1px solid var(--gold);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .realm-name {
+            font-size: 1.3rem;
+            color: var(--gold);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .realm-title {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .realm-progress {
+            margin-top: 10px;
+        }
+        
+        .realm-progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .realm-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--legendary));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .realm-progress-text {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 3px;
+        }
+        
+        .stat-number {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .stat-bar-mini {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        
+        .stat-fill-mini {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+        
+        /* ========== 宝物栏 ========== */
+        .artifacts-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .artifacts-title {
+            color: var(--gold);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .artifacts-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .artifact-tag {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .artifact-tag.legendary {
+            background: linear-gradient(135deg, rgba(255, 0, 255, 0.3), rgba(255, 0, 255, 0.1));
+            border: 1px solid var(--legendary);
+            color: var(--legendary);
+        }
+        
+        .artifact-tag.epic {
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.3), rgba(255, 107, 157, 0.1));
+            border: 1px solid var(--epic);
+            color: var(--epic);
+        }
+        
+        .artifact-tag.rare {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.1));
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        /* ========== 事件区域 ========== */
+        .event-container {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .event-title {
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .event-title.cool-event {
+            color: var(--gold);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            50% { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+        }
+        
+        .event-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        
+        .event-section h4 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .event-section p {
+            color: #ccc;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+        
+        .event-section.scene {
+            border-left: 3px solid var(--primary);
+        }
+        .event-section.scene h4 { color: var(--primary); }
+        
+        .event-section.situation {
+            border-left: 3px solid var(--secondary);
+        }
+        .event-section.situation h4 { color: var(--secondary); }
+        
+        .event-section.conflict {
+            border-left: 3px solid var(--danger);
+        }
+        .event-section.conflict h4 { color: var(--danger); }
+        
+        .event-section.psychology {
+            border-left: 3px solid var(--success);
+            background: rgba(46, 204, 113, 0.05);
+        }
+        .event-section.psychology h4 { color: var(--success); }
+        
+        .event-section.npc-dialogue {
+            border-left: 3px solid var(--warning);
+            background: rgba(243, 156, 18, 0.05);
+        }
+        .event-section.npc-dialogue h4 { color: var(--warning); }
+        
+        /* ========== 选项区域 ========== */
+        .choices-container {
+            margin-top: 25px;
+        }
+        
+        .choices-title {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .choice-card {
+            background: linear-gradient(135deg, var(--bg-hover) 0%, #252535 100%);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .choice-card:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+        }
+        
+        .choice-title {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .choice-desc {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .choice-impact {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .impact-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .impact-tag.positive {
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success);
+        }
+        
+        .impact-tag.negative {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger);
+        }
+        
+        .impact-tag.neutral {
+            background: rgba(149, 165, 166, 0.2);
+            color: #95a5a6;
+        }
+        
+        .impact-tag.legendary {
+            background: rgba(255, 0, 255, 0.2);
+            color: var(--legendary);
+        }
+        
+        /* ========== 结果展示 ========== */
+        .result-container {
+            background: linear-gradient(135deg, var(--bg-hover) 0%, #252535 100%);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .result-container.amazing {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 0, 255, 0.05));
+            animation: amazingResult 1s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes amazingResult {
+            0% { opacity: 0; transform: scale(0.9); }
+            50% { transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .result-title {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .result-container.amazing .result-title {
+            color: var(--gold);
+            font-size: 1.5rem;
+        }
+        
+        .result-short {
+            color: #ccc;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-style: italic;
+        }
+        
+        .result-long {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .result-changes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .change-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .change-icon {
+            font-size: 1.2rem;
+            margin-right: 10px;
+        }
+        
+        .change-info {
+            flex: 1;
+        }
+        
+        .change-name {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .change-value {
+            font-weight: bold;
+        }
+        
+        .change-value.positive { color: var(--success); }
+        .change-value.negative { color: var(--danger); }
+        .change-value.legendary { color: var(--legendary); }
+        
+        .change-reason {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        /* 突破特效 */
+        .breakthrough-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.95), rgba(255, 0, 255, 0.9));
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 1000;
+            animation: breakthroughPop 2s ease forwards;
+        }
+        
+        @keyframes breakthroughPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            40% { transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .breakthrough-title {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .breakthrough-realm {
+            font-size: 1.5rem;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+        
+        /* ========== 历史记录 ========== */
+        .history-container {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .history-title {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            padding: 10px 0;
+        }
+        
+        .history-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            border-left: 3px solid var(--primary);
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .history-item.cool-event {
+            border-left-color: var(--gold);
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), rgba(0, 0, 0, 0.2));
+        }
+        
+        .history-age {
+            color: var(--primary);
+            font-weight: bold;
+            min-width: 50px;
+        }
+        
+        .history-item.cool-event .history-age {
+            color: var(--gold);
+        }
+        
+        .history-content {
+            flex: 1;
+        }
+        
+        .history-event {
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .history-choice {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        
+        /* ========== 成就系统 ========== */
+        .achievements-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 0, 255, 0.05));
+            border: 1px solid var(--gold);
+            border-radius: 12px;
+        }
+        
+        .achievements-title {
+            color: var(--gold);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .achievements-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .achievement-badge {
+            padding: 8px 15px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid var(--gold);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .achievement-badge.locked {
+            opacity: 0.5;
+            background: var(--border);
+            border-color: #666;
+            color: #666;
+        }
+        
+        /* ========== 游戏结束界面 ========== */
+        .ending-container {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%);
+            border: 2px solid var(--danger);
+            border-radius: 16px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .ending-container.legendary {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 0, 255, 0.05));
+        }
+        
+        .ending-title {
+            font-size: 2rem;
+            color: var(--danger);
+            margin-bottom: 20px;
+        }
+        
+        .ending-container.legendary .ending-title {
+            color: var(--gold);
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        .ending-age {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        
+        .ending-reason {
+            font-size: 1.1rem;
+            color: #888;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .final-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .final-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .final-stat-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .final-stat-name {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .final-stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .life-evaluation {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .evaluation-title {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+        
+        .evaluation-desc {
+            color: #ccc;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        .unlocked-achievements {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+        }
+        
+        .unlocked-achievements h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+        }
+        
+        /* ========== 控制按钮 ========== */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        /* ========== 加载动画 ========== */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ========== 爽点提示 ========== */
+        .cool-event-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--gold), #ff8c00);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 10px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            h1 { font-size: 1.8rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .final-stats { grid-template-columns: repeat(2, 1fr); }
+            .result-changes { grid-template-columns: 1fr; }
+            .attributes-grid { grid-template-columns: 1fr; }
+            .character-grid { grid-template-columns: 1fr; }
+            .mode-toggle { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 标题 -->
+        <h1>🎭 World Simulator V6</h1>
+        <p class="subtitle">爽文人生模拟器 - 体验逆天改命的快感</p>
+        
+        <!-- ========== 模式选择 ========== -->
+        <div class="mode-selection" id="modeSelection">
+            <div class="mode-title">⚡ 选择游戏模式</div>
+            <p style="color: #888; margin-bottom: 15px;">爽文模式将提供更刺激的剧情、更丰厚的奖励和更爽快的成长体验</p>
+            <div class="mode-toggle">
+                <div class="mode-option" data-mode="normal" onclick="selectMode('normal')">
+                    <h3>📖 普通模式</h3>
+                    <p>真实模拟，平淡人生</p>
+                </div>
+                <div class="mode-option selected" data-mode="power" onclick="selectMode('power')">
+                    <h3>⚡ 爽文模式</h3>
+                    <p>金手指开局，逆袭人生</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ========== 世界观选择 ========== -->
+        <div id="worldSelectionScreen">
+            <!-- 历史类 -->
+            <div class="category-title">📜 历史类</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="history_empire" onclick="selectWorld('history_empire')">
+                    <div class="world-category cat-history">历史</div>
+                    <div class="world-icon">🏛️</div>
+                    <div class="world-name">王朝争霸</div>
+                    <div class="world-desc">大秦、大唐、大明，王朝兴衰轮回</div>
+                </div>
+                <div class="world-card" data-world="history_wuxia" onclick="selectWorld('history_wuxia')">
+                    <div class="world-category cat-history">历史</div>
+                    <div class="world-icon">⚔️</div>
+                    <div class="world-name">武侠江湖</div>
+                    <div class="world-desc">门派林立，侠客行，快意恩仇</div>
+                </div>
+                <div class="world-card" data-world="history_court" onclick="selectWorld('history_court')">
+                    <div class="world-category cat-history">历史</div>
+                    <div class="world-icon">👑</div>
+                    <div class="world-name">宫廷权谋</div>
+                    <div class="world-desc">宦官外戚后宫，权力游戏</div>
+                </div>
+            </div>
+            
+            <!-- 东方玄幻 -->
+            <div class="category-title">🐉 东方玄幻</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="fantasy_xianxia" onclick="selectWorld('fantasy_xianxia')">
+                    <div class="world-category cat-fantasy">玄幻</div>
+                    <div class="world-icon">✨</div>
+                    <div class="world-name">修仙修真</div>
+                    <div class="world-desc">灵气飞升，渡劫成仙，问道长生</div>
+                </div>
+                <div class="world-card" data-world="fantasy_xuanhuan" onclick="selectWorld('fantasy_xuanhuan')">
+                    <div class="world-category cat-fantasy">玄幻</div>
+                    <div class="world-icon">🔮</div>
+                    <div class="world-name">东方玄幻</div>
+                    <div class="world-desc">洪荒封神，西游量劫，圣人争斗</div>
+                </div>
+            </div>
+            
+            <!-- 科幻类 -->
+            <div class="category-title">🚀 科幻类</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="scifi_space" onclick="selectWorld('scifi_space')">
+                    <div class="world-category cat-scifi">科幻</div>
+                    <div class="world-icon">🌌</div>
+                    <div class="world-name">星际文明</div>
+                    <div class="world-desc">太空殖民，外星接触，星际战争</div>
+                </div>
+                <div class="world-card" data-world="scifi_cyberpunk" onclick="selectWorld('scifi_cyberpunk')">
+                    <div class="world-category cat-scifi">科幻</div>
+                    <div class="world-icon">🌃</div>
+                    <div class="world-name">赛博朋克</div>
+                    <div class="world-desc">高科技低生活，企业统治城市</div>
+                </div>
+            </div>
+            
+            <!-- 末日生存 -->
+            <div class="category-title">☠️ 末日生存</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="apocalypse_zombie" onclick="selectWorld('apocalypse_zombie')">
+                    <div class="world-category cat-apocalypse">末日</div>
+                    <div class="world-icon">🧟</div>
+                    <div class="world-name">丧尸末日</div>
+                    <div class="world-desc">病毒爆发，幸存者营地，人性考验</div>
+                </div>
+                <div class="world-card" data-world="apocalypse_ice" onclick="selectWorld('apocalypse_ice')">
+                    <div class="world-category cat-apocalypse">末日</div>
+                    <div class="world-icon">❄️</div>
+                    <div class="world-name">冰河世纪</div>
+                    <div class="world-desc">全球冰封，地下城，极寒生存</div>
+                </div>
+            </div>
+            
+            <!-- 现代都市 -->
+            <div class="category-title">🏙️ 现代都市</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="modern_business" onclick="selectWorld('modern_business')">
+                    <div class="world-category cat-modern">都市</div>
+                    <div class="world-icon">💼</div>
+                    <div class="world-name">商战职场</div>
+                    <div class="world-desc">IPO并购，金融危机，商业帝国</div>
+                </div>
+                <div class="world-card" data-world="modern_entertainment" onclick="selectWorld('modern_entertainment')">
+                    <div class="world-category cat-modern">都市</div>
+                    <div class="world-icon">🎬</div>
+                    <div class="world-name">娱乐明星</div>
+                    <div class="world-desc">流量资本，丑闻塌房，粉丝经济</div>
+                </div>
+            </div>
+            
+            <!-- 西方魔幻 -->
+            <div class="category-title">🧙 西方魔幻</div>
+            <div class="world-selection">
+                <div class="world-card" data-world="magic_western" onclick="selectWorld('magic_western')">
+                    <div class="world-category cat-magic">魔幻</div>
+                    <div class="world-icon">🛡️</div>
+                    <div class="world-name">西方奇幻</div>
+                    <div class="world-desc">龙与地下城，勇者斗恶龙，魔法学院</div>
+                </div>
+                <div class="world-card" data-world="magic_gothic" onclick="selectWorld('magic_gothic')">
+                    <div class="world-category cat-magic">魔幻</div>
+                    <div class="world-icon">🧛</div>
+                    <div class="world-name">哥特黑暗</div>
+                    <div class="world-desc">吸血鬼狼人，猎魔人，永夜降临</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" onclick="goToCharacterSelection()" id="worldNextBtn" disabled>
+                    下一步：选择角色
+                </button>
+            </div>
+        </div>
+        
+        <!-- ========== 角色选择界面 ========== -->
+        <div id="characterSelectionScreen" class="hidden">
+            <div class="category-title">👤 选择你的角色</div>
+            <div class="character-grid" id="characterGrid">
+                <!-- 角色卡片将在这里动态生成 -->
+            </div>
+            <div class="controls">
+                <button class="btn-secondary" onclick="backToWorldSelection()">返回</button>
+                <button class="btn-primary" onclick="startGame()" id="startGameBtn" disabled>开始游戏</button>
+            </div>
+        </div>
+        
+        <!-- ========== 游戏主界面 ========== -->
+        <div id="gameScreen" class="hidden">
+            <!-- 角色状态面板 -->
+            <div class="game-header">
+                <div class="character-status">
+                    <div class="character-name" id="gameCharacterName">角色名</div>
+                    <div class="character-age" id="gameCharacterAge">0岁</div>
+                </div>
+                
+                <!-- 境界显示 -->
+                <div class="realm-display" id="realmDisplay">
+                    <div class="realm-name" id="realmName">练气期</div>
+                    <div class="realm-title" id="realmTitle">初入仙途</div>
+                    <div class="realm-progress">
+                        <div class="realm-progress-bar">
+                            <div class="realm-progress-fill" id="realmProgressFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="realm-progress-text" id="realmProgressText">0 / 100</div>
+                    </div>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-label">资产</div>
+                        <div class="stat-number" id="statAssets">50</div>
+                        <div class="stat-bar-mini"><div class="stat-fill-mini" id="barAssets" style="width: 50%; background: var(--warning);"></div></div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">❤️</div>
+                        <div class="stat-label">生命</div>
+                        <div class="stat-number" id="statHealth">50</div>
+                        <div class="stat-bar-mini"><div class="stat-fill-mini" id="barHealth" style="width: 50%; background: var(--danger);"></div></div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">⚔️</div>
+                        <div class="stat-label">能力</div>
+                        <div class="stat-number" id="statAbility">50</div>
+                        <div class="stat-bar-mini"><div class="stat-fill-mini" id="barAbility" style="width: 50%; background: #3498db;"></div></div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">😊</div>
+                        <div class="stat-label">情绪</div>
+                        <div class="stat-number" id="statEmotion">50</div>
+                        <div class="stat-bar-mini"><div class="stat-fill-mini" id="barEmotion" style="width: 50%; background: var(--secondary);"></div></div>
+                    </div>
+                </div>
+                
+                <!-- 宝物栏 -->
+                <div class="artifacts-section" id="artifactsSection">
+                    <div class="artifacts-title">🏆 宝物</div>
+                    <div class="artifacts-list" id="artifactsList">
+                        <span style="color: #666; font-size: 0.85rem;">暂无宝物</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 事件区域 -->
+            <div class="event-container" id="eventContainer">
+                <div class="loading" id="eventLoading">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="eventContent" class="hidden">
+                    <div class="event-title" id="eventTitle">事件标题</div>
+                    
+                    <div class="event-section scene">
+                        <h4>📍 场景</h4>
+                        <p id="eventScene">场景描述...</p>
+                    </div>
+                    
+                    <div class="event-section situation">
+                        <h4>👤 处境</h4>
+                        <p id="eventSituation">处境描述...</p>
+                    </div>
+                    
+                    <div class="event-section conflict">
+                        <h4>⚡ 冲突</h4>
+                        <p id="eventConflict">冲突描述...</p>
+                    </div>
+                    
+                    <!-- NPC对话区域 -->
+                    <div class="event-section npc-dialogue hidden" id="npcDialogueSection">
+                        <h4>💬 对话</h4>
+                        <p id="npcDialogue"></p>
+                    </div>
+                    
+                    <!-- 心理描写区域 -->
+                    <div class="event-section psychology" id="psychologySection">
+                        <h4>🧠 内心独白</h4>
+                        <p id="psychologyText"></p>
+                    </div>
+                    
+                    <div class="choices-container">
+                        <div class="choices-title">🎯 你的选择</div>
+                        <div id="choicesList">
+                            <!-- 选项将在这里动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 结果展示 -->
+                    <div id="resultContainer" class="hidden">
+                        <div class="result-title">📋 结果</div>
+                        <div class="result-short" id="resultShort"></div>
+                        <div class="result-long" id="resultLong"></div>
+                        <div class="result-changes" id="resultChanges"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 成就系统 -->
+            <div class="achievements-section" id="achievementsSection">
+                <div class="achievements-title">🏅 成就</div>
+                <div class="achievements-list" id="achievementsList">
+                    <!-- 成就将在这里动态生成 -->
+                </div>
+            </div>
+            
+            <!-- 历史记录 -->
+            <div class="history-container" id="historyContainer">
+                <div class="history-title">📜 人生轨迹</div>
+                <div id="historyList">
+                    <!-- 历史记录将在这里动态生成 -->
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" id="nextEventBtn" onclick="nextTurn()" disabled>下一年</button>
+                <button class="btn-secondary" onclick="restartGame()">重新开始</button>
+            </div>
+        </div>
+        
+        <!-- ========== 游戏结束界面 ========== -->
+        <div id="endingScreen" class="hidden">
+            <div class="ending-container" id="endingContainer">
+                <div class="ending-title">💀 游戏结束</div>
+                <div class="ending-age" id="endingAge">享年 0 岁</div>
+                <div class="ending-reason" id="endingReason">死亡原因</div>
+                
+                <div class="final-stats" id="finalStats">
+                    <!-- 最终属性将在这里动态生成 -->
+                </div>
+                
+                <div class="life-evaluation">
+                    <div class="evaluation-title" id="evaluationTitle">人生评价</div>
+                    <div class="evaluation-desc" id="evaluationDesc">评价描述</div>
+                </div>
+                
+                <div class="unlocked-achievements" id="unlockedAchievements">
+                    <h3>🏆 本次解锁成就</h3>
+                    <div id="unlockedAchievementsList"></div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn-primary" onclick="restartGame()">重新开始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ==================== 游戏配置 ====================
+const GAME_CONFIG = {
+    // 爽文模式配置
+    powerFantasyMode: true,
+    
+    // 爽文参数
+    powerFantasy: {
+        coolEventBaseChance: 0.45,    // 基础爽点概率45%
+        coolEventGuarantee: 3,         // 每3个事件必出爽点
+        rewardMultiplier: 2.5,         // 奖励倍率2.5倍
+        penaltyReduction: 0.5,         // 惩罚减半
+        startingBonus: {
+            randomArtifact: true,      // 随机获得一件宝物
+            extraAttributePoints: 20,  // 额外20点属性
+            legendaryEncounter: true   // 开局必遇奇遇
+        },
+        deathProtection: {
+            enabled: true,
+            minAge: 30,                // 30岁前不会死亡
+            secondChance: true         // 濒死时有机会翻盘
+        }
+    },
+    
+    // 普通模式参数
+    normal: {
+        coolEventBaseChance: 0.15,
+        coolEventGuarantee: 8,
+        rewardMultiplier: 1.0,
+        penaltyReduction: 1.0,
+        startingBonus: {
+            randomArtifact: false,
+            extraAttributePoints: 0,
+            legendaryEncounter: false
+        },
+        deathProtection: {
+            enabled: false,
+            minAge: 0,
+            secondChance: false
+        }
+    }
+};
+
+// ==================== 游戏状态 ====================
+const gameState = {
+    mode: 'power',  // 'normal' 或 'power'
+    selectedWorld: null,
+    characters: [],
+    selectedCharacter: null,
+    currentEvent: null,
+    eventHistory: [],
+    usedEvents: [],
+    waitingForChoice: false,
+    gameOver: false,
+    eventCount: 0,
+    lastCoolEvent: 0,
+    achievements: [],
+    artifacts: []
+};
+
+// ==================== 境界系统 ====================
+const CULTIVATION_REALMS = {
+    fantasy_xianxia: [
+        { level: 1, name: '练气期', title: '初入仙途', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: '筑基期', title: '道基初成', maxHealth: 150, powerBonus: 20, expRequired: 200 },
+        { level: 3, name: '金丹期', title: '金丹大道', maxHealth: 250, powerBonus: 50, expRequired: 400 },
+        { level: 4, name: '元婴期', title: '元婴老怪', maxHealth: 400, powerBonus: 100, expRequired: 800 },
+        { level: 5, name: '化神期', title: '化神大能', maxHealth: 600, powerBonus: 200, expRequired: 1500 },
+        { level: 6, name: '炼虚期', title: '炼虚合道', maxHealth: 900, powerBonus: 350, expRequired: 3000 },
+        { level: 7, name: '合体期', title: '合体至尊', maxHealth: 1300, powerBonus: 550, expRequired: 6000 },
+        { level: 8, name: '大乘期', title: '大乘圆满', maxHealth: 1800, powerBonus: 800, expRequired: 12000 },
+        { level: 9, name: '渡劫期', title: '渡劫飞升', maxHealth: 2500, powerBonus: 1200, expRequired: 25000 }
+    ],
+    
+    history_wuxia: [
+        { level: 1, name: '三流', title: '江湖新秀', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: '二流', title: '小有名气', maxHealth: 140, powerBonus: 15, expRequired: 200 },
+        { level: 3, name: '一流', title: '江湖高手', maxHealth: 200, powerBonus: 35, expRequired: 400 },
+        { level: 4, name: '先天', title: '先天宗师', maxHealth: 280, powerBonus: 70, expRequired: 800 },
+        { level: 5, name: '宗师', title: '一代宗师', maxHealth: 380, powerBonus: 120, expRequired: 1500 },
+        { level: 6, name: '大宗师', title: '武道巅峰', maxHealth: 500, powerBonus: 200, expRequired: 3000 },
+        { level: 7, name: '绝世', title: '绝世高手', maxHealth: 650, powerBonus: 300, expRequired: 6000 },
+        { level: 8, name: '神话', title: '武林神话', maxHealth: 850, powerBonus: 450, expRequired: 12000 }
+    ],
+    
+    scifi_space: [
+        { level: 1, name: 'F级', title: '平民', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: 'E级', title: '士兵', maxHealth: 150, powerBonus: 20, expRequired: 200 },
+        { level: 3, name: 'D级', title: '军官', maxHealth: 220, powerBonus: 45, expRequired: 400 },
+        { level: 4, name: 'C级', title: '舰长', maxHealth: 320, powerBonus: 80, expRequired: 800 },
+        { level: 5, name: 'B级', title: '将军', maxHealth: 450, powerBonus: 130, expRequired: 1500 },
+        { level: 6, name: 'A级', title: '统帅', maxHealth: 600, powerBonus: 200, expRequired: 3000 },
+        { level: 7, name: 'S级', title: '传奇', maxHealth: 800, powerBonus: 300, expRequired: 6000 },
+        { level: 8, name: 'SS级', title: '星河霸主', maxHealth: 1100, powerBonus: 450, expRequired: 12000 },
+        { level: 9, name: 'SSS级', title: '宇宙主宰', maxHealth: 1500, powerBonus: 650, expRequired: 25000 }
+    ],
+    
+    apocalypse_zombie: [
+        { level: 1, name: '幸存者', title: '苟活者', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: '战士', title: '战斗员', maxHealth: 140, powerBonus: 15, expRequired: 200 },
+        { level: 3, name: '猎手', title: '丧尸猎手', maxHealth: 200, powerBonus: 40, expRequired: 400 },
+        { level: 4, name: '精英', title: '精英战士', maxHealth: 280, powerBonus: 75, expRequired: 800 },
+        { level: 5, name: '领袖', title: '营地领袖', maxHealth: 380, powerBonus: 120, expRequired: 1500 },
+        { level: 6, name: '霸主', title: '废土霸主', maxHealth: 500, powerBonus: 180, expRequired: 3000 },
+        { level: 7, name: '传奇', title: '人类传奇', maxHealth: 650, powerBonus: 260, expRequired: 6000 },
+        { level: 8, name: '救世主', title: '末世救世主', maxHealth: 850, powerBonus: 380, expRequired: 12000 }
+    ],
+    
+    modern_business: [
+        { level: 1, name: '实习生', title: '职场新人', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: '专员', title: '业务骨干', maxHealth: 130, powerBonus: 10, expRequired: 200 },
+        { level: 3, name: '经理', title: '部门经理', maxHealth: 180, powerBonus: 25, expRequired: 400 },
+        { level: 4, name: '总监', title: '区域总监', maxHealth: 250, powerBonus: 50, expRequired: 800 },
+        { level: 5, name: 'VP', title: '副总裁', maxHealth: 350, powerBonus: 90, expRequired: 1500 },
+        { level: 6, name: 'CEO', title: '首席执行官', maxHealth: 480, powerBonus: 150, expRequired: 3000 },
+        { level: 7, name: '董事长', title: '商业巨头', maxHealth: 650, powerBonus: 230, expRequired: 6000 },
+        { level: 8, name: '商业帝王', title: '财富传奇', maxHealth: 880, powerBonus: 350, expRequired: 12000 }
+    ],
+    
+    magic_western: [
+        { level: 1, name: '学徒', title: '魔法学徒', maxHealth: 100, powerBonus: 0, expRequired: 100 },
+        { level: 2, name: '法师', title: '正式法师', maxHealth: 150, powerBonus: 20, expRequired: 200 },
+        { level: 3, name: '大法师', title: '大法师', maxHealth: 220, powerBonus: 45, expRequired: 400 },
+        { level: 4, name: '魔导师', title: '魔导师', maxHealth: 320, powerBonus: 85, expRequired: 800 },
+        { level: 5, name: '大魔导师', title: '大魔导师', maxHealth: 450, powerBonus: 140, expRequired: 1500 },
+        { level: 6, name: '圣魔导', title: '圣魔导师', maxHealth: 600, powerBonus: 210, expRequired: 3000 },
+        { level: 7, name: '法神', title: '法神', maxHealth: 800, powerBonus: 300, expRequired: 6000 },
+        { level: 8, name: '元素主宰', title: '元素主宰', maxHealth: 1100, powerBonus: 450, expRequired: 12000 }
+    ]
+};
+
+// 为所有世界观提供默认境界系统
+const DEFAULT_REALM = CULTIVATION_REALMS.fantasy_xianxia;
+
+// ==================== 宝物系统 ====================
+const ARTIFACTS = {
+    fantasy: [
+        { id: 'spirit_sword', name: '灵霄仙剑', rarity: 'legendary', type: 'weapon', icon: '⚔️',
+          effect: { ability: 30, health: 20 }, desc: '上古剑仙遗留的飞剑，剑气纵横三万里' },
+        { id: 'jade_pendant', name: '乾坤玉佩', rarity: 'epic', type: 'accessory', icon: '🔮',
+          effect: { assets: 50, emotion: 20 }, desc: '内含一方小世界，可储物可藏身' },
+        { id: 'elixir', name: '九转金丹', rarity: 'legendary', type: 'consumable', icon: '💊',
+          effect: { health: 100, ability: 50 }, desc: '太上老君炼制的仙丹，一颗可增百年修为' },
+        { id: 'manual', name: '太虚真经', rarity: 'epic', type: 'skill', icon: '📜',
+          effect: { ability: 40 }, desc: '记载无上心法的秘籍，修炼可速成' },
+        { id: 'spirit_stone', name: '极品灵石', rarity: 'rare', type: 'resource', icon: '💎',
+          effect: { assets: 30 }, desc: '蕴含浓郁灵气的晶石，修炼者必备' },
+        { id: 'immortal_robe', name: '仙缕衣', rarity: 'epic', type: 'armor', icon: '👘',
+          effect: { health: 40, emotion: 15 }, desc: '天蚕丝织就，刀枪不入，水火不侵' }
+    ],
+    
+    wuxia: [
+        { id: 'dragon_sword', name: '屠龙刀', rarity: 'legendary', type: 'weapon', icon: '🔪',
+          effect: { ability: 35, health: 15 }, desc: '武林至尊，宝刀屠龙' },
+        { id: 'light_skill', name: '凌波微步', rarity: 'epic', type: 'skill', icon: '💨',
+          effect: { ability: 25, health: 25 }, desc: '逍遥派绝学，步法精妙绝伦' },
+        { id: 'healing_pill', name: '大还丹', rarity: 'rare', type: 'consumable', icon: '💊',
+          effect: { health: 80, ability: 20 }, desc: '少林寺秘药，疗伤圣品' },
+        { id: 'treasure_map', name: '藏宝图', rarity: 'rare', type: 'quest', icon: '🗺️',
+          effect: { assets: 100 }, desc: '指向前朝宝藏的神秘地图' },
+        { id: 'wine_urn', name: '醉仙酿', rarity: 'epic', type: 'consumable', icon: '🍶',
+          effect: { ability: 30, emotion: 30 }, desc: '一壶可醉倒仙人的美酒' }
+    ],
+    
+    scifi: [
+        { id: 'ai_chip', name: '量子AI芯片', rarity: 'legendary', type: 'implant', icon: '🧠',
+          effect: { ability: 40, emotion: 10 }, desc: '植入后可获得超强计算能力' },
+        { id: 'nano_suit', name: '纳米战甲', rarity: 'epic', type: 'armor', icon: '🤖',
+          effect: { health: 50, ability: 20 }, desc: '可自我修复的高科技战甲' },
+        { id: 'energy_core', name: '反物质核心', rarity: 'legendary', type: 'resource', icon: '⚡',
+          effect: { assets: 100 }, desc: '价值连城的能源核心' },
+        { id: 'starship', name: '私人星舰', rarity: 'epic', type: 'vehicle', icon: '🚀',
+          effect: { assets: 80, ability: 30 }, desc: '可进行星际航行的私人飞船' },
+        { id: 'laser_gun', name: '等离子步枪', rarity: 'rare', type: 'weapon', icon: '🔫',
+          effect: { ability: 25 }, desc: '军用级能量武器' }
+    ],
+    
+    apocalypse: [
+        { id: 'power_armor', name: '动力装甲', rarity: 'epic', type: 'armor', icon: '🛡️',
+          effect: { health: 60, ability: 25 }, desc: '军方遗留的先进单兵装备' },
+        { id: 'antidote', name: '病毒血清', rarity: 'legendary', type: 'consumable', icon: '💉',
+          effect: { health: 100, emotion: 30 }, desc: '可免疫丧尸病毒的珍贵血清' },
+        { id: 'bunker_key', name: '避难所密钥', rarity: 'epic', type: 'property', icon: '🔑',
+          effect: { assets: 60, health: 20 }, desc: '可开启设施齐全的地下避难所' },
+        { id: 'weapon_crate', name: '武器箱', rarity: 'rare', type: 'weapon', icon: '🔫',
+          effect: { ability: 30 }, desc: '装满军用武器的补给箱' },
+        { id: 'generator', name: '便携式发电机', rarity: 'rare', type: 'resource', icon: '🔌',
+          effect: { assets: 40 }, desc: '可在任何环境下提供电力' }
+    ],
+    
+    modern: [
+        { id: 'stock_tip', name: '内幕消息', rarity: 'epic', type: 'information', icon: '📈',
+          effect: { assets: 150 }, desc: '某上市公司即将被收购的内幕消息' },
+        { id: 'patent', name: '技术专利', rarity: 'legendary', type: 'intellectual', icon: '📋',
+          effect: { assets: 200, ability: 30 }, desc: '革命性的技术专利' },
+        { id: 'luxury_car', name: '限量跑车', rarity: 'rare', type: 'vehicle', icon: '🏎️',
+          effect: { assets: 40, emotion: 20 }, desc: '彰显身份的顶级座驾' },
+        { id: 'mansion', name: '豪宅', rarity: 'epic', type: 'property', icon: '🏰',
+          effect: { assets: 100, health: 15, emotion: 15 }, desc: '地段绝佳的豪华别墅' },
+        { id: 'watch', name: '名表', rarity: 'rare', type: 'accessory', icon: '⌚',
+          effect: { assets: 30, emotion: 10 }, desc: '瑞士顶级制表工艺' }
+    ],
+    
+    magic: [
+        { id: 'staff', name: '元素法杖', rarity: 'legendary', type: 'weapon', icon: '🪄',
+          effect: { ability: 35, health: 15 }, desc: '可操控四大元素的神器法杖' },
+        { id: 'grimoire', name: '死灵之书', rarity: 'epic', type: 'skill', icon: '📖',
+          effect: { ability: 45, emotion: -10 }, desc: '记载禁忌魔法的古籍' },
+        { id: 'phoenix_feather', name: '凤凰羽毛', rarity: 'legendary', type: 'consumable', icon: '🪶',
+          effect: { health: 100, ability: 30 }, desc: '可让人浴火重生的神物' },
+        { id: 'crystal_ball', name: '预言水晶', rarity: 'epic', type: 'accessory', icon: '🔮',
+          effect: { ability: 20, emotion: 25 }, desc: '可预见未来的神秘水晶' },
+        { id: 'potion', name: '万能药水', rarity: 'rare', type: 'consumable', icon: '🧪',
+          effect: { health: 50, ability: 15 }, desc: '可治愈任何伤势的魔法药剂' }
+    ]
+};
+
+// ==================== 成就系统 ====================
+const ACHIEVEMENTS = {
+    first_blood: { id: 'first_blood', name: '初出茅庐', icon: '🌱', desc: '完成第一个事件', condition: (s) => s.eventCount >= 1 },
+    survivor: { id: 'survivor', name: '生存专家', icon: '🛡️', desc: '存活到50岁', condition: (s) => s.selectedCharacter?.age >= 50 },
+    rich: { id: 'rich', name: '富可敌国', icon: '💰', desc: '资产达到100', condition: (s) => s.selectedCharacter?.attributes?.assets >= 100 },
+    powerful: { id: 'powerful', name: '战力巅峰', icon: '⚔️', desc: '能力达到100', condition: (s) => s.selectedCharacter?.attributes?.ability >= 100 },
+    legend: { id: 'legend', name: '一代传奇', icon: '👑', desc: '达到最高境界', condition: (s) => s.selectedCharacter?.realm?.level >= 8 },
+    collector: { id: 'collector', name: '收藏家', icon: '🏆', desc: '收集5件宝物', condition: (s) => s.artifacts?.length >= 5 },
+    lucky: { id: 'lucky', name: '天选之子', icon: '🍀', desc: '连续触发3个爽点事件', condition: (s) => s.consecutiveCoolEvents >= 3 },
+    comeback: { id: 'comeback', name: '绝境翻盘', icon: '🔥', desc: '濒死时成功翻盘', condition: (s) => s.hasComeback },
+    master: { id: 'master', name: '名师高徒', icon: '👨‍🏫', desc: '被大佬收为弟子', condition: (s) => s.hasMaster },
+    faceslap: { id: 'faceslap', name: '打脸专家', icon: '👋', desc: '成功打脸反派3次', condition: (s) => s.faceSlapCount >= 3 }
+};
+
+// ==================== 世界观配置 ====================
+const WORLDS = {
+    history_empire: { name: '王朝争霸', category: 'history', icon: '🏛️' },
+    history_wuxia: { name: '武侠江湖', category: 'history', icon: '⚔️' },
+    history_court: { name: '宫廷权谋', category: 'history', icon: '👑' },
+    fantasy_xianxia: { name: '修仙修真', category: 'fantasy', icon: '✨' },
+    fantasy_xuanhuan: { name: '东方玄幻', category: 'fantasy', icon: '🔮' },
+    scifi_space: { name: '星际文明', category: 'scifi', icon: '🌌' },
+    scifi_cyberpunk: { name: '赛博朋克', category: 'scifi', icon: '🌃' },
+    apocalypse_zombie: { name: '丧尸末日', category: 'apocalypse', icon: '🧟' },
+    apocalypse_ice: { name: '冰河世纪', category: 'apocalypse', icon: '❄️' },
+    modern_business: { name: '商战职场', category: 'modern', icon: '💼' },
+    modern_entertainment: { name: '娱乐明星', category: 'modern', icon: '🎬' },
+    magic_western: { name: '西方奇幻', category: 'magic', icon: '🛡️' },
+    magic_gothic: { name: '哥特黑暗', category: 'magic', icon: '🧛' }
+};
+
+// ==================== 属性配置 ====================
+const ATTRIBUTES = {
+    assets: { name: '资产', icon: '💰', color: '#f39c12' },
+    health: { name: '生命', icon: '❤️', color: '#e74c3c' },
+    ability: { name: '能力', icon: '⚔️', color: '#3498db' },
+    emotion: { name: '情绪', icon: '😊', color: '#9b59b6' }
+};
+
+// ==================== 调试日志 ====================
+function debugLog(message) {
+    console.log('[World Simulator V6]', message);
+}
+
+// ==================== 模式选择 ====================
+function selectMode(mode) {
+    gameState.mode = mode;
+    GAME_CONFIG.powerFantasyMode = (mode === 'power');
+    
+    document.querySelectorAll('.mode-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    document.querySelector(`.mode-option[data-mode="${mode}"]`).classList.add('selected');
+    
+    debugLog('选择模式: ' + mode);
+}
+
+// ==================== 世界观选择 ====================
+function selectWorld(worldId) {
+    debugLog('选择世界观: ' + worldId);
+    gameState.selectedWorld = worldId;
+    
+    document.querySelectorAll('.world-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    const selectedCard = document.querySelector(`.world-card[data-world="${worldId}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+    
+    document.getElementById('worldNextBtn').disabled = false;
+}
+
+function goToCharacterSelection() {
+    if (!gameState.selectedWorld) {
+        alert('请先选择一个世界观！');
+        return;
+    }
+    
+    generateCharacters();
+    document.getElementById('worldSelectionScreen').classList.add('hidden');
+    document.getElementById('characterSelectionScreen').classList.remove('hidden');
+}
+
+// ==================== 角色生成 ====================
+function generateCharacters() {
+    debugLog('生成角色...');
+    
+    const world = WORLDS[gameState.selectedWorld];
+    if (!world) {
+        console.error('错误：找不到世界观', gameState.selectedWorld);
+        return;
+    }
+    
+    // 获取当前配置
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    gameState.characters = [
+        generateRandomCharacter(world, 1, config),
+        generateRandomCharacter(world, 2, config),
+        generateRandomCharacter(world, 3, config)
+    ];
+    
+    renderCharacterCards();
+}
+
+function generateRandomCharacter(world, index, config) {
+    const genders = ['男', '女'];
+    const gender = genders[Math.floor(Math.random() * genders.length)];
+    
+    const surnames = getSurnames(world.category);
+    const names = getNames(world.category, gender);
+    const name = surnames[Math.floor(Math.random() * surnames.length)] + 
+                 names[Math.floor(Math.random() * names.length)];
+    
+    // 基础属性
+    let attributes = generateAttributes();
+    
+    // 爽文模式额外属性点
+    if (config.startingBonus.extraAttributePoints > 0) {
+        const keys = Object.keys(attributes);
+        for (let i = 0; i < config.startingBonus.extraAttributePoints / 5; i++) {
+            const key = keys[Math.floor(Math.random() * keys.length)];
+            attributes[key] = Math.min(100, attributes[key] + 5);
+        }
+    }
+    
+    const background = generateBackground(world.category);
+    const traits = generateTraits();
+    
+    // 初始化境界系统
+    const realmSystem = getRealmSystem(gameState.selectedWorld);
+    
+    return {
+        id: index,
+        name: name,
+        gender: gender,
+        age: 0,
+        attributes: attributes,
+        background: background,
+        traits: traits,
+        worldType: gameState.selectedWorld,
+        realm: {
+            level: 1,
+            exp: 0,
+            ...realmSystem[0]
+        },
+        maxHealth: realmSystem[0]?.maxHealth || 100
+    };
+}
+
+function getRealmSystem(worldType) {
+    const baseType = worldType.split('_')[0];
+    const realmMap = {
+        fantasy: CULTIVATION_REALMS.fantasy_xianxia,
+        history: CULTIVATION_REALMS.history_wuxia,
+        scifi: CULTIVATION_REALMS.scifi_space,
+        apocalypse: CULTIVATION_REALMS.apocalypse_zombie,
+        modern: CULTIVATION_REALMS.modern_business,
+        magic: CULTIVATION_REALMS.magic_western
+    };
+    return realmMap[baseType] || DEFAULT_REALM;
+}
+
+function getSurnames(category) {
+    const pools = {
+        history: ['李', '王', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴'],
+        fantasy: ['云', '风', '雷', '天', '玄', '苍', '龙', '凤', '星', '月'],
+        scifi: ['林', '艾', '诺', '赛', '星', '宇', '光', '量', '数', '网'],
+        apocalypse: ['铁', '钢', '沙', '灰', '荒', '战', '猎', '生', '独', '风'],
+        modern: ['林', '陈', '张', '王', '李', '刘', '黄', '赵', '周', '吴'],
+        magic: ['艾', '奥', '贝', '凯', '德', '菲', '加', '哈', '伊', '杰']
+    };
+    return pools[category] || pools.modern;
+}
+
+function getNames(category, gender) {
+    const pools = {
+        history: { 
+            male: ['子轩', '文博', '明远', '志强', '俊杰', '鹏飞', '浩然', '天宇'],
+            female: ['秀英', '桂英', '秀兰', '玉兰', '婷婷', '丽娜', '雅琴', '晓燕']
+        },
+        fantasy: {
+            male: ['无尘', '破空', '逐风', '御剑', '凌霄', '问天', '逍遥', '长生'],
+            female: ['若雪', '梦瑶', '清婉', '灵儿', '紫萱', '倾城', '无双', '仙儿']
+        },
+        scifi: {
+            male: ['宇航', '星际', '未来', '科技', '智能', '量子', '探索', '先驱'],
+            female: ['星月', '银河', '光子', '量子', '智能', '数据', '未来', '探索']
+        },
+        apocalypse: {
+            male: ['铁拳', '钢牙', '猎手', '战士', '幸存者', '守护者', '领袖', '先锋'],
+            female: ['玫瑰', '荆棘', '蔷薇', '铁花', '医护', '后勤', '领袖', '智囊']
+        },
+        modern: {
+            male: ['俊杰', '伟强', '志明', '建华', '国强', '文杰', '晓峰', '海涛'],
+            female: ['婷婷', '丽娜', '敏华', '雅琴', '晓燕', '静怡', '思琪', '雨萱']
+        },
+        magic: {
+            male: ['雷恩', '亚瑟', '格罗', '沃尔', '弗雷', '德里', '卡斯', '托尔'],
+            female: ['艾拉', '露娜', '菲奥', '贝拉', '安娜', '伊莎', '索菲', '格温']
+        }
+    };
+    return (pools[category] || pools.modern)[gender];
+}
+
+function generateAttributes() {
+    const attrs = { assets: 50, health: 50, ability: 50, emotion: 50 };
+    const keys = Object.keys(attrs);
+    
+    for (let i = 0; i < 20; i++) {
+        const key = keys[Math.floor(Math.random() * keys.length)];
+        const change = Math.floor(Math.random() * 5) - 2;
+        attrs[key] = Math.max(10, Math.min(100, attrs[key] + change));
+    }
+    
+    return attrs;
+}
+
+function generateBackground(category) {
+    const backgrounds = {
+        history: [
+            { name: '寒门书生', desc: '出身贫寒，寒窗苦读，渴望通过科举改变命运', bonus: { ability: 10, assets: -5 } },
+            { name: '世家子弟', desc: '出身名门望族，从小接受良好教育', bonus: { assets: 10, emotion: -5 } },
+            { name: '商贾之家', desc: '家境殷实，从小耳濡目染经商之道', bonus: { assets: 15, ability: -5 } },
+            { name: '武将世家', desc: '世代从军，从小习武，性格刚毅', bonus: { health: 10, ability: 5 } }
+        ],
+        fantasy: [
+            { name: '修仙世家', desc: '出生于修仙家族，从小接触修炼之法', bonus: { ability: 15, assets: 5 } },
+            { name: '凡人村落', desc: '普通农家子弟，偶然获得修炼机缘', bonus: { health: 10, emotion: 10 } },
+            { name: '散修遗孤', desc: '父母是被追杀的散修，遗留一些功法秘籍', bonus: { ability: 10, assets: -10 } },
+            { name: '宗门杂役', desc: '在修仙宗门打杂，偷学功法', bonus: { ability: 5, assets: -5 } }
+        ],
+        scifi: [
+            { name: '殖民地居民', desc: '出生于边缘星球殖民地，适应能力强', bonus: { health: 10, ability: 5 } },
+            { name: '地球精英', desc: '地球核心区的精英家庭，接受最好教育', bonus: { ability: 15, assets: 10 } },
+            { name: '太空站孤儿', desc: '在太空站长大的孤儿，靠打零工维生', bonus: { emotion: -10, ability: 10 } },
+            { name: '矿工家庭', desc: '小行星矿工的孩子，身体强壮', bonus: { health: 15, assets: -5 } }
+        ],
+        apocalypse: [
+            { name: '避难所出生', desc: '在地下避难所出生，从未见过阳光', bonus: { health: 5, assets: 10 } },
+            { name: '废土拾荒者', desc: '在废墟中长大，擅长寻找资源', bonus: { assets: 15, ability: 5 } },
+            { name: '幸存者营地', desc: '在幸存者营地长大，学会各种生存技能', bonus: { health: 10, ability: 10 } },
+            { name: '掠夺者后代', desc: '父母是废土掠夺者，从小学会战斗', bonus: { ability: 15, emotion: -15 } }
+        ],
+        modern: [
+            { name: '工薪家庭', desc: '普通工薪阶层家庭，生活平淡但温馨', bonus: { emotion: 15, assets: -5 } },
+            { name: '富二代', desc: '家境优渥，从小衣食无忧', bonus: { assets: 20, emotion: -10 } },
+            { name: '单亲家庭', desc: '父母离异，跟随母亲/父亲生活', bonus: { emotion: -5, ability: 5 } },
+            { name: '农村出身', desc: '来自农村，靠努力考上城市大学', bonus: { ability: 10, health: 5 } }
+        ],
+        magic: [
+            { name: '魔法学徒', desc: '魔法学院的学生，天赋平平但勤奋好学', bonus: { ability: 10, emotion: 5 } },
+            { name: '贵族私生子', desc: '贵族与女仆的私生子，身份尴尬', bonus: { assets: 5, emotion: -10 } },
+            { name: '冒险者后代', desc: '父母是著名冒险者，从小听着冒险故事长大', bonus: { ability: 10, health: 5 } },
+            { name: '神秘孤儿', desc: '被遗弃在教堂门口，拥有未知的魔法天赋', bonus: { ability: 15, assets: -10 } }
+        ]
+    };
+    
+    const list = backgrounds[category] || backgrounds.modern;
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateTraits() {
+    const allTraits = [
+        { name: '坚韧不拔', desc: '面对困难从不放弃', type: 'positive', effect: { health: 5, emotion: 5 } },
+        { name: '聪明绝顶', desc: '智商超群，学习能力强', type: 'positive', effect: { ability: 10 } },
+        { name: '社交达人', desc: '善于与人交往，人脉广泛', type: 'positive', effect: { emotion: 10, assets: 5 } },
+        { name: '商业头脑', desc: '对金钱敏感，善于发现商机', type: 'positive', effect: { assets: 10 } },
+        { name: '体弱多病', desc: '天生体质差，容易生病', type: 'negative', effect: { health: -15 } },
+        { name: '性格孤僻', desc: '不善与人交往', type: 'negative', effect: { emotion: -15 } },
+        { name: '冲动易怒', desc: '容易冲动，经常得罪人', type: 'negative', effect: { emotion: -10, assets: -5 } },
+        { name: '懒惰成性', desc: '缺乏上进心', type: 'negative', effect: { ability: -10 } },
+        { name: '完美主义', desc: '追求完美，对自己要求极高', type: 'neutral', effect: { ability: 10, emotion: -10 } },
+        { name: '冒险家', desc: '喜欢冒险，不惧风险', type: 'neutral', effect: { ability: 5, health: -10, assets: 10 } }
+    ];
+    
+    const traits = [];
+    if (Math.random() < 0.8) {
+        const positive = allTraits.filter(t => t.type === 'positive');
+        traits.push(positive[Math.floor(Math.random() * positive.length)]);
+    }
+    if (Math.random() < 0.5) {
+        const negative = allTraits.filter(t => t.type === 'negative');
+        traits.push(negative[Math.floor(Math.random() * negative.length)]);
+    }
+    if (traits.length === 0 || Math.random() < 0.3) {
+        const neutral = allTraits.filter(t => t.type === 'neutral');
+        traits.push(neutral[Math.floor(Math.random() * neutral.length)]);
+    }
+    
+    return traits;
+}
+
+function renderCharacterCards() {
+    const grid = document.getElementById('characterGrid');
+    grid.innerHTML = gameState.characters.map(char => `
+        <div class="character-card" data-id="${char.id}" onclick="selectCharacter(${char.id})">
+            <div class="character-header">
+                <div class="character-avatar">${char.gender === '男' ? '👨' : '👩'}</div>
+                <div class="character-info">
+                    <h3>${char.name}</h3>
+                    <span>${char.gender} · ${char.realm.name}</span>
+                </div>
+            </div>
+            
+            <div class="character-background">
+                <h4>${char.background.name}</h4>
+                <p>${char.background.desc}</p>
+            </div>
+            
+            <div class="character-traits">
+                ${char.traits.map(t => `
+                    <span class="trait-tag ${t.type}">${t.name}</span>
+                `).join('')}
+            </div>
+            
+            <div class="attributes-grid">
+                ${Object.entries(char.attributes).map(([key, value]) => {
+                    const attr = ATTRIBUTES[key];
+                    const percentage = value;
+                    let fillClass = 'low';
+                    if (value >= 70) fillClass = 'high';
+                    else if (value >= 40) fillClass = 'medium';
+                    return `
+                        <div class="attribute-item">
+                            <div class="attribute-header">
+                                <span class="attribute-name">${attr.icon} ${attr.name}</span>
+                                <span class="attribute-value">${value}</span>
+                            </div>
+                            <div class="attribute-bar">
+                                <div class="attribute-fill ${fillClass}" style="width: ${percentage}%; background: ${attr.color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectCharacter(charId) {
+    debugLog('选择角色: ' + charId);
+    gameState.selectedCharacter = gameState.characters.find(c => c.id === charId);
+    
+    // 应用背景和特质加成
+    applyBonuses(gameState.selectedCharacter);
+    
+    // 更新UI
+    document.querySelectorAll('.character-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelector(`.character-card[data-id="${charId}"]`).classList.add('selected');
+    
+    // 启用开始按钮
+    document.getElementById('startGameBtn').disabled = false;
+}
+
+function applyBonuses(character) {
+    // 应用背景加成
+    for (let [key, value] of Object.entries(character.background.bonus || {})) {
+        if (character.attributes[key] !== undefined) {
+            character.attributes[key] = Math.max(10, Math.min(100, character.attributes[key] + value));
+        }
+    }
+    
+    // 应用特质加成
+    character.traits.forEach(trait => {
+        for (let [key, value] of Object.entries(trait.effect || {})) {
+            if (character.attributes[key] !== undefined) {
+                character.attributes[key] = Math.max(10, Math.min(100, character.attributes[key] + value));
+            }
+        }
+    });
+}
+
+function backToWorldSelection() {
+    document.getElementById('characterSelectionScreen').classList.add('hidden');
+    document.getElementById('worldSelectionScreen').classList.remove('hidden');
+}
+
+// ==================== 游戏主循环 ====================
+function startGame() {
+    debugLog('开始游戏...');
+    if (!gameState.selectedCharacter) {
+        debugLog('错误：未选择角色');
+        return;
+    }
+    
+    // 初始化游戏状态
+    gameState.eventHistory = [];
+    gameState.usedEvents = [];
+    gameState.waitingForChoice = false;
+    gameState.gameOver = false;
+    gameState.eventCount = 0;
+    gameState.lastCoolEvent = 0;
+    gameState.achievements = [];
+    gameState.artifacts = [];
+    gameState.consecutiveCoolEvents = 0;
+    gameState.hasComeback = false;
+    gameState.hasMaster = false;
+    gameState.faceSlapCount = 0;
+    
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    // 爽文模式开局福利
+    if (config.startingBonus.randomArtifact) {
+        giveRandomArtifact();
+    }
+    
+    // 切换界面
+    document.getElementById('characterSelectionScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    
+    // 更新角色状态显示
+    updateCharacterDisplay();
+    updateArtifactsDisplay();
+    updateAchievementsDisplay();
+    
+    // 生成第一个事件
+    setTimeout(() => {
+        generateEvent();
+    }, 500);
+}
+
+function giveRandomArtifact() {
+    const worldType = gameState.selectedWorld;
+    const baseType = worldType.split('_')[0];
+    const artifactPool = ARTIFACTS[baseType] || ARTIFACTS.fantasy;
+    
+    // 爽文模式开局给稀有或史诗宝物
+    const rareArtifacts = artifactPool.filter(a => a.rarity === 'rare' || a.rarity === 'epic');
+    const artifact = rareArtifacts[Math.floor(Math.random() * rareArtifacts.length)];
+    
+    if (artifact) {
+        gameState.artifacts.push(artifact);
+        debugLog('获得开局宝物: ' + artifact.name);
+    }
+}
+
+function updateCharacterDisplay() {
+    const char = gameState.selectedCharacter;
+    document.getElementById('gameCharacterName').textContent = char.name;
+    document.getElementById('gameCharacterAge').textContent = char.age + '岁';
+    
+    // 更新境界显示
+    document.getElementById('realmName').textContent = char.realm.name;
+    document.getElementById('realmTitle').textContent = char.realm.title;
+    
+    // 计算境界进度
+    const realmSystem = getRealmSystem(gameState.selectedWorld);
+    const currentRealm = realmSystem[char.realm.level - 1];
+    const nextRealm = realmSystem[char.realm.level];
+    
+    if (nextRealm) {
+        const progress = Math.min(100, (char.realm.exp / nextRealm.expRequired) * 100);
+        document.getElementById('realmProgressFill').style.width = progress + '%';
+        document.getElementById('realmProgressText').textContent = `${char.realm.exp} / ${nextRealm.expRequired}`;
+    } else {
+        document.getElementById('realmProgressFill').style.width = '100%';
+        document.getElementById('realmProgressText').textContent = '已达巅峰';
+    }
+    
+    // 更新属性条
+    Object.entries(char.attributes).forEach(([key, value]) => {
+        const attr = ATTRIBUTES[key];
+        document.getElementById(`stat${key.charAt(0).toUpperCase() + key.slice(1)}`).textContent = value;
+        const fill = document.getElementById(`bar${key.charAt(0).toUpperCase() + key.slice(1)}`);
+        fill.style.width = value + '%';
+    });
+}
+
+function updateArtifactsDisplay() {
+    const list = document.getElementById('artifactsList');
+    if (gameState.artifacts.length === 0) {
+        list.innerHTML = '<span style="color: #666; font-size: 0.85rem;">暂无宝物</span>';
+    } else {
+        list.innerHTML = gameState.artifacts.map(a => `
+            <div class="artifact-tag ${a.rarity}" title="${a.desc}">
+                ${a.icon} ${a.name}
+            </div>
+        `).join('');
+    }
+}
+
+function updateAchievementsDisplay() {
+    const list = document.getElementById('achievementsList');
+    const unlockedIds = gameState.achievements.map(a => a.id);
+    
+    let html = '';
+    
+    // 显示已解锁成就
+    gameState.achievements.forEach(a => {
+        html += `<div class="achievement-badge">${a.icon} ${a.name}</div>`;
+    });
+    
+    // 显示未解锁成就（锁定状态）
+    Object.values(ACHIEVEMENTS).forEach(a => {
+        if (!unlockedIds.includes(a.id)) {
+            html += `<div class="achievement-badge locked">🔒 ???</div>`;
+        }
+    });
+    
+    list.innerHTML = html;
+}
+
+function checkAchievements() {
+    Object.values(ACHIEVEMENTS).forEach(achievement => {
+        const alreadyUnlocked = gameState.achievements.some(a => a.id === achievement.id);
+        if (!alreadyUnlocked && achievement.condition(gameState)) {
+            gameState.achievements.push(achievement);
+            debugLog('解锁成就: ' + achievement.name);
+            
+            // 可以在这里添加成就解锁动画
+        }
+    });
+    updateAchievementsDisplay();
+}
+
+// ==================== 事件系统 ====================
+function generateEvent() {
+    debugLog('生成事件...');
+    const char = gameState.selectedCharacter;
+    const worldType = gameState.selectedWorld;
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    // 显示加载
+    document.getElementById('eventLoading').classList.remove('hidden');
+    document.getElementById('eventContent').classList.add('hidden');
+    
+    // 模拟API调用延迟
+    setTimeout(() => {
+        try {
+            // 确定事件类型
+            const eventType = getNextEventType();
+            const event = generateEventByType(worldType, char.age, eventType);
+            
+            gameState.currentEvent = event;
+            gameState.usedEvents.push(event.id);
+            renderEvent(event);
+            
+            document.getElementById('eventLoading').classList.add('hidden');
+            document.getElementById('eventContent').classList.remove('hidden');
+            
+            gameState.waitingForChoice = true;
+            document.getElementById('nextEventBtn').disabled = true;
+            
+            // 更新事件计数
+            gameState.eventCount++;
+            if (event.type === 'cool') {
+                gameState.lastCoolEvent = gameState.eventCount;
+                gameState.consecutiveCoolEvents++;
+            } else {
+                gameState.consecutiveCoolEvents = 0;
+            }
+            
+            // 检查成就
+            checkAchievements();
+            
+            debugLog('事件生成完成: ' + event.title + (event.type === 'cool' ? ' [爽点]' : ''));
+        } catch (error) {
+            debugLog('生成事件出错: ' + error.message);
+            console.error(error);
+        }
+    }, 800);
+}
+
+function getNextEventType() {
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    // 前3个事件必为爽点
+    if (gameState.eventCount < 3 && config.startingBonus.legendaryEncounter) {
+        return 'cool';
+    }
+    
+    // 检查是否到了必出爽点的时候
+    const eventsSinceLastCool = gameState.eventCount - gameState.lastCoolEvent;
+    if (eventsSinceLastCool >= config.coolEventGuarantee) {
+        return 'cool';
+    }
+    
+    // 概率判定
+    if (Math.random() < config.coolEventBaseChance) {
+        return 'cool';
+    }
+    
+    return 'normal';
+}
+
+function generateEventByType(worldType, age, eventType) {
+    const baseType = worldType.split('_')[0];
+    
+    if (eventType === 'cool') {
+        return generateCoolEvent(worldType, age);
+    } else {
+        return generateNormalEvent(worldType, age);
+    }
+}
+
+function generateCoolEvent(worldType, age) {
+    const coolEventTypes = ['artifact', 'breakthrough', 'master', 'challenge', 'faceslap', 'lucky'];
+    const type = coolEventTypes[Math.floor(Math.random() * coolEventTypes.length)];
+    
+    switch(type) {
+        case 'artifact':
+            return generateArtifactEvent(worldType, age);
+        case 'breakthrough':
+            return generateBreakthroughEvent(worldType, age);
+        case 'master':
+            return generateMasterEvent(worldType, age);
+        case 'challenge':
+            return generateChallengeEvent(worldType, age);
+        case 'faceslap':
+            return generateFaceSlapEvent(worldType, age);
+        case 'lucky':
+            return generateLuckyEvent(worldType, age);
+        default:
+            return generateArtifactEvent(worldType, age);
+    }
+}
+
+// 宝物事件
+function generateArtifactEvent(worldType, age) {
+    const baseType = worldType.split('_')[0];
+    const artifactPool = ARTIFACTS[baseType] || ARTIFACTS.fantasy;
+    const artifact = artifactPool[Math.floor(Math.random() * artifactPool.length)];
+    
+    const scenarios = [
+        {
+            scene: `【奇遇】我独自走在山间小径，忽然脚下一绊，低头一看，竟然是一具古老的骸骨，手中紧紧握着什么东西...`,
+            situation: `那是一${artifact.type === 'weapon' ? '把' : '件'}${artifact.name}！${artifact.desc}。`,
+            conflict: `这件宝物散发着${artifact.rarity === 'legendary' ? '耀眼的神光' : '淡淡的光芒'}，显然不是凡品。但我感觉到周围似乎有其他气息在靠近...`
+        },
+        {
+            scene: `【奇遇】我在一处废弃的古迹中探索，推开一扇尘封已久的石门，眼前的景象让我惊呆了...`,
+            situation: `密室中央供奉着${artifact.name}，${artifact.desc}。这显然是前人留下的传承！`,
+            conflict: `正当我准备上前取宝时，突然感觉到一股强大的禁制力量。想要获得这件宝物，必须通过考验。`
+        },
+        {
+            scene: `【奇遇】我在集市上闲逛，一个衣衫褴褛的老者拦住了我，神秘兮兮地从怀中掏出一件东西...`,
+            situation: `"年轻人，我看你骨骼清奇，这件${artifact.name}与你有缘。"老者说道。${artifact.desc}。`,
+            conflict: `老者开价极低，明显不识货。但我注意到旁边有几道贪婪的目光正在注视着我们...`
+        }
+    ];
+    
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    return {
+        id: 'artifact_' + Date.now(),
+        title: '⚡ 天降奇缘 - ' + artifact.name,
+        type: 'cool',
+        coolType: 'artifact',
+        artifact: artifact,
+        ...scenario,
+        options: [
+            {
+                id: 'A',
+                title: '立即认主，速速离去',
+                desc: '你迅速滴血认主，将宝物收入囊中，然后快速离开现场。',
+                impact: multiplyImpact({ ability: 15, emotion: 10 }, config.rewardMultiplier),
+                reward: { artifact: artifact },
+                shortTerm: `你成功获得了${artifact.name}，一股强大的力量涌入体内！`,
+                longTerm: '这件宝物将成为你崛起的重要助力。'
+            },
+            {
+                id: 'B',
+                title: '高调展示，震慑宵小',
+                desc: '你故意展示宝物的气息，让所有人都知道你获得了奇遇。',
+                impact: multiplyImpact({ ability: 20, emotion: 15, health: -5 }, config.rewardMultiplier),
+                reward: { artifact: artifact, fame: 30 },
+                shortTerm: `众人震惊于${artifact.name}的威势，无人敢轻举妄动！`,
+                longTerm: '你的名声大噪，但也引来了更多关注。'
+            },
+            {
+                id: 'C',
+                title: '潜心研究，发掘潜力',
+                desc: '你找个安全的地方，开始仔细研究这件宝物的奥秘。',
+                impact: multiplyImpact({ ability: 25, emotion: 5 }, config.rewardMultiplier),
+                reward: { artifact: artifact, bonusExp: 50 },
+                shortTerm: `你发现了${artifact.name}的隐藏能力，收获巨大！`,
+                longTerm: '你对宝物的理解远超常人，能发挥出更强的威力。'
+            }
+        ]
+    };
+}
+
+// 突破事件
+function generateBreakthroughEvent(worldType, age) {
+    const char = gameState.selectedCharacter;
+    const realmSystem = getRealmSystem(worldType);
+    const currentRealm = realmSystem[char.realm.level - 1];
+    const nextRealm = realmSystem[char.realm.level];
+    
+    if (!nextRealm) {
+        // 已达巅峰，生成其他爽点事件
+        return generateArtifactEvent(worldType, age);
+    }
+    
+    const scenarios = [
+        {
+            scene: `【突破】我感觉体内的力量已经积累到了极限，${currentRealm.name}的瓶颈开始松动...`,
+            situation: `这是突破到${nextRealm.name}的关键时刻！一旦成功，我的实力将暴涨，${nextRealm.title}！`,
+            conflict: `突破需要承受巨大的痛苦，而且有一定风险。我可以选择稳妥积累，或者冒险一搏。`
+        },
+        {
+            scene: `【突破】在生死战斗中，我感觉自己的极限被不断打破，一种玄妙的感觉涌上心头...`,
+            situation: `战斗中突破！这是最危险也是最快速的突破方式。如果能成功，实力将远超同阶！`,
+            conflict: `敌人在旁虎视眈眈，我必须在战斗中完成突破，否则就是死路一条！`
+        }
+    ];
+    
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    return {
+        id: 'breakthrough_' + Date.now(),
+        title: '⚡ 境界突破 - ' + nextRealm.name,
+        type: 'cool',
+        coolType: 'breakthrough',
+        nextRealm: nextRealm,
+        ...scenario,
+        options: [
+            {
+                id: 'A',
+                title: '全力突破，向死而生',
+                desc: '你燃烧精血，爆发出全部潜力，强行冲击境界瓶颈！',
+                impact: multiplyImpact({ ability: 30, health: -15, emotion: 30 }, config.rewardMultiplier),
+                reward: { breakthrough: true, realm: nextRealm },
+                shortTerm: `轰！你成功突破到${nextRealm.name}，实力暴涨！`,
+                longTerm: '这次突破让你的根基更加扎实，战力远超同阶。'
+            },
+            {
+                id: 'B',
+                title: '稳扎稳打，水到渠成',
+                desc: '你压制住急躁，按照功法循序渐进地突破。',
+                impact: multiplyImpact({ ability: 20, health: 5, emotion: 10 }, config.rewardMultiplier),
+                reward: { breakthrough: true, realm: nextRealm, stable: true },
+                shortTerm: `你平稳地突破到${nextRealm.name}，没有任何副作用。`,
+                longTerm: '你的突破虽然不够惊艳，但基础扎实，未来潜力更大。'
+            }
+        ]
+    };
+}
+
+// 师父事件
+function generateMasterEvent(worldType, age) {
+    const masterTitles = {
+        fantasy: ['元婴老怪', '化神大能', '隐世高人', '太上长老'],
+        history: ['武林盟主', '一代宗师', '隐世剑客', '少林方丈'],
+        scifi: ['科学泰斗', '星际元帅', 'AI之父', '量子大师'],
+        apocalypse: ['废土之王', '生存专家', '军团领袖', '医者仁心'],
+        modern: ['商业巨鳄', '投资之神', '行业教父', '创业传奇'],
+        magic: ['大魔导师', '法神', '龙骑士', '精灵女王']
+    };
+    
+    const baseType = worldType.split('_')[0];
+    const titles = masterTitles[baseType] || masterTitles.fantasy;
+    const masterTitle = titles[Math.floor(Math.random() * titles.length)];
+    
+    const scenarios = [
+        {
+            scene: `【奇遇】一位神秘的老者出现在我面前，他目光如炬，仿佛能看穿我的一切...`,
+            situation: `"年轻人，我是${masterTitle}。我看你资质不错，可愿拜我为师？"老者的声音仿佛来自九天之上。`,
+            conflict: `成为${masterTitle}的弟子意味着一飞冲天，但也意味着要承担相应的责任和风险。`
+        },
+        {
+            scene: `【奇遇】我在修炼时遇到了瓶颈，正当苦恼之际，一道身影悄然出现...`,
+            situation: `${masterTitle}亲自指点我！这可是无数人求都求不来的机缘！`,
+            conflict: `前辈说我的修炼方法有问题，要我从头学起。这意味着要放弃之前的很多积累。`
+        }
+    ];
+    
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    return {
+        id: 'master_' + Date.now(),
+        title: '⚡ 名师高徒 - ' + masterTitle,
+        type: 'cool',
+        coolType: 'master',
+        masterTitle: masterTitle,
+        ...scenario,
+        options: [
+            {
+                id: 'A',
+                title: '拜入门下，潜心修炼',
+                desc: `你恭敬地行拜师礼，正式成为${masterTitle}的弟子。`,
+                impact: multiplyImpact({ ability: 40, assets: 30, emotion: 20 }, config.rewardMultiplier),
+                reward: { master: true, masterTitle: masterTitle },
+                shortTerm: `${masterTitle}赐给你珍贵的修炼资源和功法，你的实力突飞猛进！`,
+                longTerm: '你有了强大的靠山，修炼之路一片坦途。'
+            },
+            {
+                id: 'B',
+                title: '请求指点，保持独立',
+                desc: '你婉拒了拜师，但请求前辈指点一二。',
+                impact: multiplyImpact({ ability: 20, emotion: 10 }, config.rewardMultiplier),
+                reward: { guidance: true },
+                shortTerm: `${masterTitle}虽然有些遗憾，但还是给了你一些指点。`,
+                longTerm: '你保持了独立性，但也失去了一些机会。'
+            }
+        ]
+    };
+}
+
+// 挑战事件
+function generateChallengeEvent(worldType, age) {
+    const opponentTypes = {
+        fantasy: ['嚣张的世家子弟', '目中无人的天才', '仗势欺人的师兄'],
+        history: ['恶霸地主', '贪官污吏', '江湖败类'],
+        scifi: ['傲慢的贵族', ' corporate 高管', '军校优等生'],
+        apocalypse: ['掠夺者头目', '暴君', '叛徒'],
+        modern: ['富二代', '职场霸凌者', '竞争对手'],
+        magic: ['傲慢的法师', '贵族少爷', '学院恶霸']
+    };
+    
+    const baseType = worldType.split('_')[0];
+    const opponents = opponentTypes[baseType] || opponentTypes.fantasy;
+    const opponent = opponents[Math.floor(Math.random() * opponents.length)];
+    
+    const scenarios = [
+        {
+            scene: `【挑战】${opponent}当众羞辱我，说我这辈子都不可能超过他。周围的人都用怜悯或嘲讽的目光看着我...`,
+            situation: `就在刚才，我 secret 地完成了突破，实力已经今非昔比！`,
+            conflict: `我可以选择隐忍不发，或者当场打脸，让所有人震惊！`
+        },
+        {
+            scene: `【挑战】${opponent}向我发起挑战，想要在众人面前击败我，树立威信。`,
+            situation: `所有人都认为我必败无疑，但我刚刚获得了一件强大的宝物/突破境界！`,
+            conflict: `接受挑战有风险，但如果赢了，我将一战成名！`
+        }
+    ];
+    
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    return {
+        id: 'challenge_' + Date.now(),
+        title: '⚡ 一战成名',
+        type: 'cool',
+        coolType: 'challenge',
+        opponent: opponent,
+        ...scenario,
+        options: [
+            {
+                id: 'A',
+                title: '全力以赴，震惊全场',
+                desc: '你不再隐藏实力，爆发出全部力量！',
+                impact: multiplyImpact({ ability: 25, emotion: 40, assets: 20 }, config.rewardMultiplier),
+                reward: { fame: 50, faceSlap: true },
+                shortTerm: `${opponent}脸色惨白，全场哗然！你以压倒性优势获胜！`,
+                longTerm: '你一战成名，再无人敢小觑你。'
+            },
+            {
+                id: 'B',
+                title: '以弱胜强，技惊四座',
+                desc: '你故意示弱，然后在关键时刻一击制胜！',
+                impact: multiplyImpact({ ability: 20, emotion: 35, assets: 15 }, config.rewardMultiplier),
+                reward: { fame: 40, faceSlap: true },
+                shortTerm: '你的战术让所有人惊叹，这才是真正的高手！',
+                longTerm: '你不仅展示了实力，还展示了智慧。'
+            }
+        ]
+    };
+}
+
+// 打脸事件
+function generateFaceSlapEvent(worldType, age) {
+    return generateChallengeEvent(worldType, age);
+}
+
+// 幸运事件
+function generateLuckyEvent(worldType, age) {
+    const scenarios = [
+        {
+            scene: `【奇遇】我在路边捡到一个破旧的袋子，随手打开一看...`,
+            situation: `里面竟然装满了灵石/金币/资源！这简直是天降横财！`,
+            conflict: `这笔意外之财来得太容易了，我总觉得有些不安...`
+        },
+        {
+            scene: `【奇遇】我参加了一个抽奖/拍卖/赌局，本来只是玩玩而已...`,
+            situation: `没想到竟然中了大奖！奖品丰厚得令人难以置信！`,
+            conflict: `有人怀疑我作弊，想要找麻烦。`
+        }
+    ];
+    
+    const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    return {
+        id: 'lucky_' + Date.now(),
+        title: '⚡ 天降横财',
+        type: 'cool',
+        coolType: 'lucky',
+        ...scenario,
+        options: [
+            {
+                id: 'A',
+                title: '低调收下，快速离开',
+                desc: '你不动声色地收下财物，迅速离开现场。',
+                impact: multiplyImpact({ assets: 80, emotion: 15 }, config.rewardMultiplier),
+                shortTerm: '你成功获得了这笔意外之财，没有任何麻烦。',
+                longTerm: '这笔财富为你的发展提供了重要资金。'
+            },
+            {
+                id: 'B',
+                title: '投资自己，提升实力',
+                desc: '你用这笔钱购买了修炼资源/装备/技能书。',
+                impact: multiplyImpact({ assets: 30, ability: 30, health: 20 }, config.rewardMultiplier),
+                shortTerm: '你的实力因此得到了显著提升！',
+                longTerm: '投资自己永远是最明智的选择。'
+            }
+        ]
+    };
+}
+
+// 普通事件
+function generateNormalEvent(worldType, age) {
+    const baseType = worldType.split('_')[0];
+    
+    const normalEvents = {
+        fantasy: [
+            {
+                id: 'cultivation_daily',
+                title: '日常修炼',
+                scene: '【日常】今天是我闭关修炼的第三天，体内的灵气运转越来越顺畅...',
+                situation: '修炼进度稳定，但感觉距离突破还有一段距离。',
+                conflict: '我可以选择继续闭关，或者出去历练寻找机缘。',
+                options: [
+                    { id: 'A', title: '继续闭关', desc: '你决定继续潜心修炼。', impact: { ability: 5, emotion: -3 }, shortTerm: '修炼有所精进，但过程枯燥。', longTerm: '稳扎稳打，根基扎实。' },
+                    { id: 'B', title: '外出历练', desc: '你决定出去寻找机缘。', impact: { ability: 3, health: -5, emotion: 5 }, shortTerm: '遇到了一些小麻烦，但也有些收获。', longTerm: '阅历增加了，但修炼进度放缓。' }
+                ]
+            },
+            {
+                id: 'market_visit',
+                title: '坊市淘宝',
+                scene: '【日常】我来到坊市，想要购买一些修炼所需的材料...',
+                situation: '坊市里人来人往，各种商品琳琅满目。',
+                conflict: '我看中了几样东西，但预算有限，必须做出选择。',
+                options: [
+                    { id: 'A', title: '购买丹药', desc: '你购买了恢复用的丹药。', impact: { assets: -10, health: 10 }, shortTerm: '获得了急需的丹药。', longTerm: '有备无患，安全更有保障。' },
+                    { id: 'B', title: '购买功法', desc: '你购买了一本功法秘籍。', impact: { assets: -15, ability: 8 }, shortTerm: '获得了新的修炼法门。', longTerm: '功法积累，为日后突破打基础。' }
+                ]
+            }
+        ],
+        
+        history: [
+            {
+                id: 'study_daily',
+                title: '寒窗苦读',
+                scene: '【日常】烛光摇曳，我坐在书桌前，面前堆满了经史子集...',
+                situation: '科举临近，我必须加倍努力。',
+                conflict: '读书枯燥乏味，我开始有些懈怠。',
+                options: [
+                    { id: 'A', title: '发奋苦读', desc: '你强迫自己集中精力继续读书。', impact: { ability: 5, emotion: -5, health: -3 }, shortTerm: '学问有所长进，但身心俱疲。', longTerm: '知识积累，为科举做准备。' },
+                    { id: 'B', title: '劳逸结合', desc: '你决定出去走走，换换心情。', impact: { ability: 2, emotion: 8, health: 3 }, shortTerm: '心情好了很多，但读书进度慢了。', longTerm: '保持良好的心态更重要。' }
+                ]
+            }
+        ],
+        
+        scifi: [
+            {
+                id: 'training_sim',
+                title: '模拟训练',
+                scene: '【日常】我进入虚拟现实训练舱，准备进行今天的战斗训练...',
+                situation: '训练系统为我匹配了适合的对手。',
+                conflict: '我可以选择安全的基础训练，或者挑战高难度的实战模拟。',
+                options: [
+                    { id: 'A', title: '基础训练', desc: '你选择了安全的基础训练。', impact: { ability: 3, health: 2 }, shortTerm: '训练顺利完成，能力稳步提升。', longTerm: '基础扎实，但进步缓慢。' },
+                    { id: 'B', title: '实战模拟', desc: '你选择了高难度的实战模拟。', impact: { ability: 8, health: -10, emotion: 5 }, shortTerm: '训练很艰难，但收获巨大。', longTerm: '实战能力显著提升。' }
+                ]
+            }
+        ],
+        
+        apocalypse: [
+            {
+                id: 'scavenge_run',
+                title: '物资搜寻',
+                scene: '【日常】我和小队成员一起外出搜寻物资...',
+                situation: '我们发现了一个可能有物资的废弃建筑。',
+                conflict: '建筑看起来不太稳固，可能有危险，也可能有收获。',
+                options: [
+                    { id: 'A', title: '冒险进入', desc: '你们决定进入建筑搜寻。', impact: { assets: 15, health: -8, ability: 3 }, shortTerm: '找到了一些物资，但有人受了轻伤。', longTerm: '收获不错，但风险也大。' },
+                    { id: 'B', title: '谨慎放弃', desc: '你们决定安全第一，放弃这次搜寻。', impact: { emotion: -3 }, shortTerm: '安全返回，但一无所获。', longTerm: '谨慎行事，保住了性命。' }
+                ]
+            }
+        ],
+        
+        modern: [
+            {
+                id: 'work_overtime',
+                title: '加班之夜',
+                scene: '【日常】办公室里只剩下我一个人，面前是堆积如山的工作...',
+                situation: '明天就是截止日期，我必须今晚完成。',
+                conflict: '加班会损害健康，但完不成工作会影响前途。',
+                options: [
+                    { id: 'A', title: '熬夜加班', desc: '你决定熬夜完成工作。', impact: { ability: 5, health: -8, emotion: -5 }, shortTerm: '工作完成了，但身心俱疲。', longTerm: '上司对你的印象很好。' },
+                    { id: 'B', title: '明天再说', desc: '你决定先回家休息。', impact: { health: 5, emotion: 3, ability: -3 }, shortTerm: '休息得很好，但工作进度落后。', longTerm: '健康重要，但职业发展受影响。' }
+                ]
+            }
+        ],
+        
+        magic: [
+            {
+                id: 'spell_practice',
+                title: '魔法练习',
+                scene: '【日常】我在魔法练习室中，反复练习着新学的法术...',
+                situation: '这个法术很难掌握，我已经失败了很多次。',
+                conflict: '继续练习会消耗大量魔力，但放弃就前功尽弃。',
+                options: [
+                    { id: 'A', title: '坚持不懈', desc: '你继续反复练习，直到掌握为止。', impact: { ability: 8, health: -5, emotion: -3 }, shortTerm: '终于掌握了这个法术！', longTerm: '魔法水平有了明显提升。' },
+                    { id: 'B', title: '改日再练', desc: '你决定先休息一下，改天再练。', impact: { health: 3, emotion: 2 }, shortTerm: '魔力恢复了，但法术还是没掌握。', longTerm: '进度慢了，但避免了魔力透支。' }
+                ]
+            }
+        ]
+    };
+    
+    const events = normalEvents[baseType] || normalEvents.fantasy;
+    return events[Math.floor(Math.random() * events.length)];
+}
+
+// 影响倍率计算
+function multiplyImpact(impact, multiplier) {
+    const result = {};
+    for (let [key, value] of Object.entries(impact)) {
+        if (value > 0) {
+            result[key] = Math.floor(value * multiplier);
+        } else {
+            result[key] = Math.floor(value * GAME_CONFIG.powerFantasy.penaltyReduction);
+        }
+    }
+    return result;
+}
+
+// ==================== 事件渲染 ====================
+function renderEvent(event) {
+    const titleEl = document.getElementById('eventTitle');
+    titleEl.textContent = event.title;
+    titleEl.className = 'event-title' + (event.type === 'cool' ? ' cool-event' : '');
+    
+    // 添加爽点标识
+    if (event.type === 'cool') {
+        titleEl.innerHTML += ' <span class="cool-event-badge">爽点</span>';
+    }
+    
+    document.getElementById('eventScene').textContent = event.scene;
+    document.getElementById('eventSituation').textContent = event.situation;
+    document.getElementById('eventConflict').textContent = event.conflict;
+    
+    // 心理描写
+    const psychSection = document.getElementById('psychologySection');
+    const psychText = document.getElementById('psychologyText');
+    
+    if (event.type === 'cool') {
+        const psychologies = [
+            '我的心跳加速，一种难以言喻的兴奋感涌上心头...这是改变命运的机会！',
+            '我深吸一口气，努力让自己冷静下来。但内心的激动怎么也压制不住...',
+            '机会就在眼前！我不能错过，无论如何都要把握住！',
+            '这就是传说中的奇遇吗？我感觉自己的命运即将发生转折...'
+        ];
+        psychText.textContent = psychologies[Math.floor(Math.random() * psychologies.length)];
+        psychSection.classList.remove('hidden');
+    } else {
+        const psychologies = [
+            '我陷入了沉思，需要仔细权衡利弊...',
+            '这是一个需要谨慎对待的选择...',
+            '我整理了一下思绪，准备做出决定。'
+        ];
+        psychText.textContent = psychologies[Math.floor(Math.random() * psychologies.length)];
+        psychSection.classList.remove('hidden');
+    }
+    
+    // 渲染选项
+    const choicesList = document.getElementById('choicesList');
+    choicesList.innerHTML = event.options.map(opt => {
+        const impactTags = Object.entries(opt.impact).map(([key, value]) => {
+            const attr = ATTRIBUTES[key];
+            const sign = value > 0 ? '+' : '';
+            const tagClass = value > 0 ? 'positive' : (value < 0 ? 'negative' : 'neutral');
+            return `<span class="impact-tag ${tagClass}">${attr.icon} ${attr.name}${sign}${value}</span>`;
+        }).join('');
+        
+        // 特殊奖励标识
+        let rewardTag = '';
+        if (opt.reward) {
+            if (opt.reward.artifact) rewardTag = '<span class="impact-tag legendary">🏆 获得宝物</span>';
+            if (opt.reward.breakthrough) rewardTag = '<span class="impact-tag legendary">⚡ 境界突破</span>';
+            if (opt.reward.master) rewardTag = '<span class="impact-tag legendary">👨‍🏫 名师收徒</span>';
+        }
+        
+        return `
+            <div class="choice-card" onclick="makeChoice('${opt.id}')">
+                <div class="choice-title">${opt.title}</div>
+                <div class="choice-desc">${opt.desc}</div>
+                <div class="choice-impact">${impactTags}${rewardTag}</div>
+            </div>
+        `;
+    }).join('');
+    
+    // 隐藏结果容器
+    document.getElementById('resultContainer').classList.add('hidden');
+}
+
+// ==================== 选择处理 ====================
+function makeChoice(choiceId) {
+    debugLog('做出选择: ' + choiceId);
+    if (!gameState.waitingForChoice) {
+        debugLog('错误：当前不等待选择');
+        return;
+    }
+    
+    const event = gameState.currentEvent;
+    const choice = event.options.find(o => o.id === choiceId);
+    
+    if (!choice) {
+        debugLog('错误：未找到选项 ' + choiceId);
+        return;
+    }
+    
+    // 应用属性变化
+    const char = gameState.selectedCharacter;
+    const changes = [];
+    
+    Object.entries(choice.impact).forEach(([key, delta]) => {
+        const oldValue = char.attributes[key];
+        char.attributes[key] = Math.max(0, Math.min(100, char.attributes[key] + delta));
+        changes.push({
+            key,
+            name: ATTRIBUTES[key].name,
+            icon: ATTRIBUTES[key].icon,
+            oldValue,
+            newValue: char.attributes[key],
+            delta,
+            color: ATTRIBUTES[key].color
+        });
+    });
+    
+    // 处理特殊奖励
+    if (choice.reward) {
+        // 宝物奖励
+        if (choice.reward.artifact) {
+            const artifact = choice.reward.artifact === true ? event.artifact : choice.reward.artifact;
+            if (artifact && !gameState.artifacts.some(a => a.id === artifact.id)) {
+                gameState.artifacts.push(artifact);
+                // 应用宝物效果
+                if (artifact.effect) {
+                    Object.entries(artifact.effect).forEach(([key, value]) => {
+                        if (char.attributes[key] !== undefined) {
+                            char.attributes[key] = Math.min(100, char.attributes[key] + value);
+                        }
+                    });
+                }
+            }
+        }
+        
+        // 境界突破
+        if (choice.reward.breakthrough && choice.reward.realm) {
+            char.realm = { ...choice.reward.realm, exp: 0 };
+            char.maxHealth = choice.reward.realm.maxHealth;
+            showBreakthroughAnimation(choice.reward.realm);
+        }
+        
+        // 师父
+        if (choice.reward.master) {
+            gameState.hasMaster = true;
+        }
+        
+        // 打脸计数
+        if (choice.reward.faceSlap) {
+            gameState.faceSlapCount++;
+        }
+        
+        // 经验奖励
+        if (choice.reward.bonusExp) {
+            addRealmExp(choice.reward.bonusExp);
+        }
+    }
+    
+    // 增加年龄
+    const ageIncrease = Math.floor(Math.random() * 3) + 2;
+    char.age += ageIncrease;
+    
+    // 增加境界经验
+    addRealmExp(10 + Math.floor(Math.random() * 20));
+    
+    // 记录历史
+    gameState.eventHistory.push({
+        age: char.age,
+        eventTitle: event.title,
+        choice: choice.title,
+        isCool: event.type === 'cool'
+    });
+    
+    // 更新显示
+    updateCharacterDisplay();
+    updateArtifactsDisplay();
+    renderResult(choice, changes, event.type === 'cool');
+    updateHistory();
+    checkAchievements();
+    
+    // 检查游戏结束
+    if (checkGameOver()) {
+        return;
+    }
+    
+    gameState.waitingForChoice = false;
+    document.getElementById('nextEventBtn').disabled = false;
+    debugLog('选择处理完成');
+}
+
+function addRealmExp(exp) {
+    const char = gameState.selectedCharacter;
+    const realmSystem = getRealmSystem(gameState.selectedWorld);
+    const nextRealm = realmSystem[char.realm.level];
+    
+    if (!nextRealm) return; // 已达巅峰
+    
+    char.realm.exp += exp;
+    
+    // 检查是否满足突破条件
+    if (char.realm.exp >= nextRealm.expRequired) {
+        // 自动突破
+        char.realm = { ...nextRealm, exp: 0 };
+        char.maxHealth = nextRealm.maxHealth;
+        showBreakthroughAnimation(nextRealm);
+    }
+}
+
+function showBreakthroughAnimation(realm) {
+    const div = document.createElement('div');
+    div.className = 'breakthrough-animation';
+    div.innerHTML = `
+        <div class="breakthrough-title">🎉 境界突破！</div>
+        <div class="breakthrough-realm">${realm.name} - ${realm.title}</div>
+    `;
+    document.body.appendChild(div);
+    
+    setTimeout(() => {
+        div.remove();
+    }, 2000);
+}
+
+function renderResult(choice, changes, isCool) {
+    const resultContainer = document.getElementById('resultContainer');
+    resultContainer.classList.remove('hidden');
+    resultContainer.className = 'result-container' + (isCool ? ' amazing' : '');
+    
+    document.getElementById('resultShort').textContent = choice.shortTerm;
+    document.getElementById('resultLong').textContent = choice.longTerm;
+    
+    const changesContainer = document.getElementById('resultChanges');
+    changesContainer.innerHTML = changes.map(change => `
+        <div class="change-item">
+            <span class="change-icon">${change.icon}</span>
+            <div class="change-info">
+                <div class="change-name">${change.name}</div>
+                <div class="change-value ${change.delta > 0 ? 'positive' : 'negative'}">
+                    ${change.oldValue} → ${change.newValue} (${change.delta > 0 ? '+' : ''}${change.delta})
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    // 禁用选项点击
+    document.querySelectorAll('.choice-card').forEach(card => {
+        card.style.pointerEvents = 'none';
+        card.style.opacity = '0.6';
+    });
+}
+
+function updateHistory() {
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = gameState.eventHistory.map(h => `
+        <div class="history-item ${h.isCool ? 'cool-event' : ''}">
+            <div class="history-age">${h.age}岁</div>
+            <div class="history-content">
+                <div class="history-event">${h.eventTitle}</div>
+                <div class="history-choice">选择：${h.choice}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    historyList.scrollTop = historyList.scrollHeight;
+}
+
+function checkGameOver() {
+    const char = gameState.selectedCharacter;
+    const attrs = char.attributes;
+    const config = GAME_CONFIG.powerFantasyMode ? GAME_CONFIG.powerFantasy : GAME_CONFIG.normal;
+    
+    // 死亡保护
+    if (config.deathProtection.enabled && char.age < config.deathProtection.minAge) {
+        // 如果属性降到0，给予急救
+        if (attrs.health <= 0) attrs.health = 10;
+        if (attrs.assets <= 0) attrs.assets = 10;
+        if (attrs.ability <= 0) attrs.ability = 10;
+        if (attrs.emotion <= 0) attrs.emotion = 10;
+        return false;
+    }
+    
+    // 濒死翻盘机会
+    if (config.deathProtection.secondChance && !gameState.hasComeback) {
+        if (attrs.health <= 0 || attrs.assets <= 0 || attrs.ability <= 0 || attrs.emotion <= 0) {
+            gameState.hasComeback = true;
+            // 给予翻盘buff
+            attrs.health = Math.max(20, attrs.health);
+            attrs.assets = Math.max(20, attrs.assets);
+            attrs.ability = Math.max(20, attrs.ability);
+            attrs.emotion = Math.max(20, attrs.emotion);
+            
+            // 显示翻盘事件
+            showComebackEvent();
+            return false;
+        }
+    }
+    
+    let deathReason = '';
+    if (attrs.health <= 0) deathReason = '生命耗尽，撒手人寰';
+    else if (attrs.assets <= 0) deathReason = '一贫如洗，流落街头';
+    else if (attrs.ability <= 0) deathReason = '能力尽失，沦为废人';
+    else if (attrs.emotion <= 0) deathReason = '心如死灰，自我了断';
+    
+    if (deathReason) {
+        debugLog('游戏结束: ' + deathReason);
+        gameState.gameOver = true;
+        showEnding(deathReason);
+        return true;
+    }
+    
+    return false;
+}
+
+function showComebackEvent() {
+    const event = {
+        id: 'comeback_' + Date.now(),
+        title: '🔥 绝境逢生',
+        type: 'cool',
+        coolType: 'comeback',
+        scene: '【奇迹】就在我以为一切都要结束的时候，体内突然涌出一股神秘的力量...',
+        situation: '这是生死关头激发的潜能！我的实力不降反升！',
+        conflict: '虽然暂时脱离了危险，但我必须更加小心，这样的运气不会总有。',
+        options: [
+            {
+                id: 'A',
+                title: '抓住这次机会，全力突破',
+                desc: '你借助这股力量，尝试突破当前的瓶颈。',
+                impact: { ability: 30, health: 30, emotion: 30, assets: 20 },
+                shortTerm: '你不仅脱离了危险，实力还有了质的飞跃！',
+                longTerm: '这次绝境让你的意志更加坚定。'
+            }
+        ]
+    };
+    
+    gameState.currentEvent = event;
+    renderEvent(event);
+}
+
+function showEnding(deathReason) {
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('endingScreen').classList.remove('hidden');
+    
+    const char = gameState.selectedCharacter;
+    document.getElementById('endingAge').textContent = `享年 ${char.age} 岁`;
+    document.getElementById('endingReason').textContent = deathReason;
+    
+    // 最终属性
+    const finalStats = document.getElementById('finalStats');
+    finalStats.innerHTML = Object.entries(char.attributes).map(([key, value]) => {
+        const attr = ATTRIBUTES[key];
+        return `
+            <div class="final-stat">
+                <div class="final-stat-icon">${attr.icon}</div>
+                <div class="final-stat-name">${attr.name}</div>
+                <div class="final-stat-value">${value}</div>
+            </div>
+        `;
+    }).join('');
+    
+    // 人生评价
+    const avgAttr = Object.values(char.attributes).reduce((a, b) => a + b, 0) / 4;
+    let evaluationTitle, evaluationDesc, endingClass;
+    
+    if (avgAttr >= 80 || char.realm.level >= 8) {
+        evaluationTitle = '🌟 传奇人生';
+        evaluationDesc = '你度过了波澜壮阔的一生，留下了不朽的传说。你的名字将被后人铭记，你的事迹将成为激励一代又一代人的传奇。';
+        endingClass = 'legendary';
+    } else if (avgAttr >= 60) {
+        evaluationTitle = '✨ 精彩人生';
+        evaluationDesc = '你的一生充满起伏，但最终收获了成功。你实现了自己的目标，过上了想要的生活。';
+        endingClass = '';
+    } else if (avgAttr >= 40) {
+        evaluationTitle = '📖 平凡人生';
+        evaluationDesc = '你的一生平淡而真实，没有惊天动地的成就，但也没有太大的遗憾。这未尝不是一种幸福。';
+        endingClass = '';
+    } else {
+        evaluationTitle = '💔 坎坷人生';
+        evaluationDesc = '你的一生充满挑战和磨难，但你从未放弃。这份坚持本身就是一种胜利。';
+        endingClass = '';
+    }
+    
+    document.getElementById('evaluationTitle').textContent = evaluationTitle;
+    document.getElementById('evaluationDesc').textContent = evaluationDesc;
+    
+    const endingContainer = document.getElementById('endingContainer');
+    endingContainer.className = 'ending-container ' + endingClass;
+    
+    // 显示解锁的成就
+    const unlockedList = document.getElementById('unlockedAchievementsList');
+    if (gameState.achievements.length > 0) {
+        unlockedList.innerHTML = gameState.achievements.map(a => `
+            <div class="achievement-badge">${a.icon} ${a.name}</div>
+        `).join('');
+    } else {
+        unlockedList.innerHTML = '<p style="color: #666;">本次游戏未解锁成就</p>';
+    }
+}
+
+// ==================== 下一步/下一年按钮功能 ====================
+function nextTurn() {
+    debugLog('nextTurn() 被调用');
+    
+    if (gameState.gameOver) {
+        debugLog('游戏已结束，无法继续');
+        return;
+    }
+    
+    if (gameState.waitingForChoice) {
+        debugLog('正在等待选择，无法继续');
+        return;
+    }
+    
+    generateEvent();
+}
+
+function restartGame() {
+    debugLog('重新开始游戏');
+    
+    // 重置游戏状态
+    Object.assign(gameState, {
+        selectedWorld: null,
+        characters: [],
+        selectedCharacter: null,
+        currentEvent: null,
+        eventHistory: [],
+        usedEvents: [],
+        waitingForChoice: false,
+        gameOver: false,
+        eventCount: 0,
+        lastCoolEvent: 0,
+        achievements: [],
+        artifacts: []
+    });
+    
+    // 重置UI
+    document.querySelectorAll('.world-card').forEach(card => card.classList.remove('selected'));
+    document.getElementById('worldNextBtn').disabled = true;
+    document.getElementById('startGameBtn').disabled = true;
+    
+    // 切换界面
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('endingScreen').classList.add('hidden');
+    document.getElementById('characterSelectionScreen').classList.add('hidden');
+    document.getElementById('worldSelectionScreen').classList.remove('hidden');
+}
+
+// ==================== 初始化 ====================
+debugLog('World Simulator V6 已加载');
+</script>
+</body>
+</html>
