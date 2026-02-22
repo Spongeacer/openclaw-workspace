@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界观模拟器 v4.0 - 深度数值关联</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #00d4ff; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #666; text-align: center; margin-bottom: 30px; }
+        
+        .status-panel { background: #12121a; border: 1px solid #1e1e2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; position: sticky; top: 10px; z-index: 100; }
+        .year-display { text-align: center; font-size: 2rem; color: #00d4ff; margin-bottom: 15px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .stat-item { text-align: center; padding: 10px; background: #1a1a25; border-radius: 8px; }
+        .stat-name { font-size: 0.75rem; color: #888; margin-bottom: 5px; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; }
+        .stat-bar { height: 4px; background: #2a2a3a; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .stat-fill { height: 100%; border-radius: 2px; transition: all 0.5s; }
+        .stat-fill.high { background: #2ecc71; } .stat-fill.medium { background: #f39c12; } .stat-fill.low { background: #e74c3c; }
+        
+        .event-stream { margin-bottom: 20px; max-height: 500px; overflow-y: auto; }
+        .event-item { background: #12121a; border-left: 3px solid #00d4ff; border-radius: 0 8px 8px 0; padding: 15px 20px; margin-bottom: 10px; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .event-year { color: #00d4ff; font-size: 0.85rem; margin-bottom: 5px; }
+        .event-title { font-weight: 500; margin-bottom: 8px; }
+        .event-desc { color: #aaa; font-size: 0.9rem; margin-bottom: 10px; }
+        .impact-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 8px; background: #1a1a25; }
+        .impact-tag.positive { color: #2ecc71; } .impact-tag.negative { color: #e74c3c; }
+        
+        .cascade-box { background: #1a1a25; border-radius: 6px; padding: 10px; margin-top: 10px; font-size: 0.85rem; }
+        .cascade-title { color: #f39c12; margin-bottom: 5px; }
+        .cascade-item { color: #aaa; margin: 3px 0; padding-left: 15px; border-left: 2px solid #f39c12; }
+        
+        .critical-node { background: linear-gradient(135deg, #1a1a25 0%, #2a1a3a 100%); border: 2px solid #9b59b6; border-radius: 12px; padding: 25px; margin: 20px 0; }
+        .critical-badge { display: inline-block; background: #9b59b6; color: #fff; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
+        .choice-card { background: #12121a; border: 1px solid #2a2a3a; border-radius: 10px; padding: 20px; margin: 10px 0; cursor: pointer; transition: all 0.3s; }
+        .choice-card:hover { border-color: #00d4ff; transform: translateY(-2px); }
+        .choice-title { color: #00d4ff; font-size: 1.1rem; margin-bottom: 8px; }
+        .choice-desc { color: #aaa; font-size: 0.9rem; margin-bottom: 12px; }
+        .choice-flavor { color: #888; font-size: 0.85rem; font-style: italic; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2a2a3a; }
+        
+        .controls { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
+        button { padding: 12px 30px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #000; font-weight: bold; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: #1a1a25; color: #e0e0e0; border: 1px solid #2a2a3a; }
+        
+        .start-screen, .ending-screen { text-align: center; padding: 30px 20px; }
+        
+        /* 世界选择区域网格布局 */
+        .world-selection { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin: 20px 0; text-align: left; }
+        .world-card { background: #12121a; border: 1px solid #1e1e2e; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+        .world-card:hover { border-color: #00d4ff; transform: translateY(-3px); box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2); }
+        .world-card.selected { border-color: #00d4ff; background: linear-gradient(135deg, #0a1a2a 0%, #12121a 100%); box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+        .world-icon { font-size: 2rem; margin-bottom: 10px; }
+        .world-name { font-size: 1.1rem; color: #00d4ff; margin-bottom: 8px; font-weight: bold; }
+        .world-desc { color: #888; font-size: 0.85rem; line-height: 1.5; }
+        .world-category { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .cat-history { background: #8b4513; color: #fff; }
+        .cat-scifi { background: #00d4ff; color: #000; }
+        .cat-fantasy { background: #9b59b6; color: #fff; }
+        .cat-magic { background: #e74c3c; color: #fff; }
+        .cat-apocalypse { background: #2c3e50; color: #fff; }
+        .cat-modern { background: #2ecc71; color: #000; }
+        .cat-myth { background: #f39c12; color: #000; }
+        
+        .category-title { color: #666; font-size: 0.9rem; margin: 25px 0 10px 0; text-align: left; border-bottom: 1px solid #2a2a3a; padding-bottom: 8px; }
+        
+        .hidden { display: none !important; }
+        
+        .worldline-indicator { text-align: center; padding: 10px; background: #1a1a25; border-radius: 8px; margin: 10px 0; font-size: 0.9rem; }
+        .worldline-indicator.crisis { border-left: 3px solid #e74c3c; }
+        .worldline-indicator.opportunity { border-left: 3px solid #2ecc71; }
+        .worldline-indicator.normal { border-left: 3px solid #00d4ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 开始界面 -->
+        <div id="startScreen" class="start-screen">
+            <h1>🌍 世界观模拟器 v4.0</h1>
+            <p class="subtitle">深度数值关联系统 · 6大核心世界观 · 世界线动态变化</p>
+            
+            <!-- 6大核心世界观 -->
+            <div class="world-selection">
+                <div class="world-card selected" data-world="history" onclick="selectWorld('history')">
+                    <div class="world-category cat-history">古代历史</div>
+                    <div class="world-icon">🏛️</div>
+                    <div class="world-name">王朝争霸</div>
+                    <div class="world-desc">商鞅变法后，中央集权制度初建，六国虎视眈眈。包含：王朝争霸、武侠江湖、宫廷权谋</div>
+                </div>
+                <div class="world-card" data-world="modern" onclick="selectWorld('modern')">
+                    <div class="world-category cat-modern">现代都市</div>
+                    <div class="world-icon">🏙️</div>
+                    <div class="world-name">现代商战</div>
+                    <div class="world-desc">资本市场，并购风云，商业帝国。包含：商战职场、娱乐明星、体育竞技</div>
+                </div>
+                <div class="world-card" data-world="fantasy" onclick="selectWorld('fantasy')">
+                    <div class="world-category cat-fantasy">东方玄幻</div>
+                    <div class="world-icon">✨</div>
+                    <div class="world-name">灵气复苏</div>
+                    <div class="world-desc">现代世界灵气觉醒，修仙与科技并存。包含：修仙修真、武侠江湖、洪荒封神</div>
+                </div>
+                <div class="world-card" data-world="magic" onclick="selectWorld('magic')">
+                    <div class="world-category cat-magic">西方魔幻</div>
+                    <div class="world-icon">🧙</div>
+                    <div class="world-name">中世纪奇幻</div>
+                    <div class="world-desc">剑与魔法，龙与地下城，勇者斗恶龙。包含：龙与地下城、哥特黑暗、蒸汽朋克</div>
+                </div>
+                <div class="world-card" data-world="scifi" onclick="selectWorld('scifi')">
+                    <div class="world-category cat-scifi">科幻未来</div>
+                    <div class="world-icon">🚀</div>
+                    <div class="world-name">AGI纪元</div>
+                    <div class="world-desc">通用人工智能突破，技术奇点来临。包含：星际文明、赛博朋克、末日废土</div>
+                </div>
+                <div class="world-card" data-world="myth" onclick="selectWorld('myth')">
+                    <div class="world-category cat-myth">神话传说</div>
+                    <div class="world-icon">🐙</div>
+                    <div class="world-name">克苏鲁觉醒</div>
+                    <div class="world-desc">古神低语，理智崩溃，神秘调查。包含：克苏鲁神话、东方志怪、北欧神话</div>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="startGame()" style="margin-top: 20px;">开始推演</button>
+        </div>
+        
+        <!-- 游戏界面 -->
+        <div id="gameScreen" class="hidden">
+            <div class="status-panel">
+                <div class="year-display" id="yearDisplay">2025年</div>                
+                <div class="stats-grid">
+                    <div class="stat-item"><div class="stat-name">⚖️ 稳定</div><div class="stat-value" id="statStability">60%</div><div class="stat-bar"><div class="stat-fill medium" id="barStability" style="width: 60%"></div></div></div>
+                    <div class="stat-item"><div class="stat-name">💰 繁荣</div><div class="stat-value" id="statProsperity">50%</div><div class="stat-bar"><div class="stat-fill medium" id="barProsperity" style="width: 50%"></div></div></div>
+                    <div class="stat-item"><div class="stat-name">⚖️ 平等</div><div class="stat-value" id="statEquality">50%</div><div class="stat-bar"><div class="stat-fill medium" id="barEquality" style="width: 50%"></div></div></div>
+                    <div class="stat-item"><div class="stat-name">🕊️ 自由</div><div class="stat-value" id="statFreedom">60%</div><div class="stat-bar"><div class="stat-fill medium" id="barFreedom" style="width: 60%"></div></div></div>
+                    <div class="stat-item"><div class="stat-name">🔬 科技</div><div class="stat-value" id="statTech">10%</div><div class="stat-bar"><div class="stat-fill low" id="barTech" style="width: 10%"></div></div></div>
+                </div>
+                
+                <div id="worldlineIndicator" class="worldline-indicator normal">当前世界线: 正常发展</div>
+            </div>
+            
+            <div class="event-stream" id="eventStream"></div>
+            
+            <div class="critical-node hidden" id="criticalNode">
+                <div class="critical-badge">重大历史节点</div>
+                <div id="criticalTitle"></div>
+                <div id="criticalDesc"></div>
+                <div id="choicesContainer"></div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" id="nextBtn" onclick="nextYear()">下一年</button>
+                <button class="btn-secondary" onclick="resetGame()">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ==================== 6大核心世界观配置 ====================
+const WORLDS = {
+    // 1. history - 古代历史
+    history: {
+        name: '古代历史',
+        category: 'history',
+        year: -221,
+        yearSuffix: '年（秦）',
+        stats: { stability: 0.7, prosperity: 0.4, equality: 0.3, freedom: 0.2, tech: 0.3 },
+        techGrowth: 0.01,
+        description: '王朝争霸、武侠江湖、宫廷权谋',
+        worldlines: {
+            crisis: ['农民起义', '六国复辟', '宦官专权'],
+            opportunity: ['统一度量衡', '书同文车同轨', '万里长城']
+        }
+    },
+    // 2. modern - 现代都市
+    modern: {
+        name: '现代都市',
+        category: 'modern',
+        year: 2024,
+        yearSuffix: '年',
+        stats: { stability: 0.6, prosperity: 0.7, equality: 0.3, freedom: 0.6, tech: 0.6 },
+        techGrowth: 0.02,
+        description: '商战职场、娱乐明星、体育竞技',
+        worldlines: {
+            crisis: ['金融危机', '垄断危机', '信任崩塌'],
+            opportunity: ['商业帝国', '创新革命', '财富自由']
+        }
+    },
+    // 3. fantasy - 东方玄幻
+    fantasy: {
+        name: '东方玄幻',
+        category: 'fantasy',
+        year: 2024,
+        yearSuffix: '年（灵气纪）',
+        stats: { stability: 0.5, prosperity: 0.5, equality: 0.4, freedom: 0.6, tech: 0.3 },
+        techGrowth: 0.02,
+        description: '修仙修真、武侠江湖、洪荒封神',
+        worldlines: {
+            crisis: ['妖兽攻城', '魔道入侵', '天劫降临'],
+            opportunity: ['仙道昌盛', '人妖共存', '飞升时代']
+        }
+    },
+    // 4. magic - 西方魔幻
+    magic: {
+        name: '西方魔幻',
+        category: 'magic',
+        year: 1000,
+        yearSuffix: '年（中土）',
+        stats: { stability: 0.5, prosperity: 0.4, equality: 0.3, freedom: 0.4, tech: 0.2 },
+        techGrowth: 0.01,
+        description: '龙与地下城、哥特黑暗、蒸汽朋克',
+        worldlines: {
+            crisis: ['魔龙苏醒', '亡灵天灾', '恶魔入侵'],
+            opportunity: ['勇者传说', '魔法复兴', '王国统一']
+        }
+    },
+    // 5. scifi - 科幻未来
+    scifi: {
+        name: '科幻未来',
+        category: 'scifi',
+        year: 2025,
+        yearSuffix: '年',
+        stats: { stability: 0.6, prosperity: 0.5, equality: 0.5, freedom: 0.6, tech: 0.1 },
+        techGrowth: 0.03,
+        description: '星际文明、赛博朋克、末日废土',
+        worldlines: {
+            crisis: ['AI叛乱', '算法独裁', '数字鸿沟'],
+            opportunity: ['技术奇点', '星际文明', '永生时代']
+        }
+    },
+    // 6. myth - 神话传说
+    myth: {
+        name: '神话传说',
+        category: 'myth',
+        year: 1920,
+        yearSuffix: '年（调查员纪）',
+        stats: { stability: 0.3, prosperity: 0.5, equality: 0.4, freedom: 0.3, tech: 0.4 },
+        techGrowth: 0.02,
+        description: '克苏鲁神话、东方志怪、北欧神话',
+        worldlines: {
+            crisis: ['旧日苏醒', '理智崩溃', '邪神降临'],
+            opportunity: ['封印成功', '知识传承', '人类坚韧']
+        }
+    }
+};
+
+// ==================== 游戏状态 ====================
+let gameState = {
+    year: 2025,
+    stability: 0.6,
+    prosperity: 0.5,
+    equality: 0.5,
+    freedom: 0.6,
+    tech: 0.1,
+    history: [],
+    choices: [],
+    waitingForChoice: false,
+    triggeredWorldlines: [],
+    worldType: 'history'
+};
+
+// ==================== 系统规则 ====================
+const SYSTEM_RULES = [
+    { id: 'chaos_damage', name: '社会混乱', condition: (s) => s.stability < 0.2, effect: { prosperity: -0.03 }, desc: '💥 社会混乱导致经济受损' },
+    { id: 'freedom_chaos', name: '无序自由', condition: (s) => s.freedom > 0.8 && s.stability < 0.4, effect: { equality: -0.02 }, desc: '⚠️ 过度自由导致资源分配失衡' },
+    { id: 'tech_unemployment', name: '技术失业', condition: (s) => s.tech > 0.7 && s.stability < 0.5, effect: { stability: -0.02 }, desc: '🤖 技术冲击引发社会动荡' },
+    { id: 'class_solidify', name: '阶级固化', condition: (s) => s.prosperity > 0.6 && s.equality < 0.3, effect: { freedom: -0.02 }, desc: '🏛️ 贫富差距导致阶层流动性下降' },
+    { id: 'authoritarian', name: '专制倾向', condition: (s) => s.stability > 0.8 && s.freedom < 0.3, effect: { equality: -0.02 }, desc: '⛓️ 强管控下特权阶层形成' },
+    { id: 'egalitarian_trap', name: '平均主义陷阱', condition: (s) => s.equality > 0.8 && s.prosperity < 0.3, effect: { tech: -0.02 }, desc: '📉 过度平均抑制创新动力' },
+    { id: 'tech_boost', name: '科技加速', condition: (s) => s.tech > 0.6 && s.prosperity > 0.6, effect: { tech: 0.01 }, desc: '🚀 经济支持下的技术飞跃' },
+    { id: 'virtuous_cycle', name: '良性循环', condition: (s) => s.stability > 0.7 && s.prosperity > 0.7, effect: { prosperity: 0.01 }, desc: '✨ 稳定环境促进经济持续增长' },
+    { id: 'innovation_pressure', name: '创新压力', condition: (s) => s.tech > 0.8 && s.freedom > 0.7, effect: { stability: -0.01, prosperity: 0.02 }, desc: '💡 快速创新带来短暂混乱但长期收益' },
+    { id: 'security_state', name: '安全国家', condition: (s) => s.stability > 0.8 && s.tech > 0.6, effect: { freedom: -0.01, prosperity: 0.01 }, desc: '🔒 高科技监控提升安全但限制自由' }
+];
+
+// ==================== 6大核心类型的专属事件（每个类型8个事件） ====================
+const EVENTS_BY_WORLD = {
+    // 1. history - 古代历史（8个专属事件）
+    history: [
+        { name: "变法改革", desc: "推行新政，整顿吏治", impact: { freedom: -0.10, stability: 0.10, equality: 0.05, prosperity: 0.05, tech: 0.02 } },
+        { name: "科举取士", desc: "选拔人才，打破门阀", impact: { equality: 0.15, freedom: 0.05, stability: 0.05, prosperity: 0.03, tech: 0.02 } },
+        { name: "边疆战事", desc: "外敌入侵，战火纷飞", impact: { stability: -0.15, prosperity: -0.10, freedom: -0.05, equality: 0.03, tech: 0.05 } },
+        { name: "盛世修典", desc: "编纂典籍，文化繁荣", impact: { prosperity: 0.08, stability: 0.05, freedom: 0.03, equality: 0.02, tech: 0.05 } },
+        { name: "宦官专权", desc: "内廷干政，朝纲紊乱", impact: { stability: -0.10, freedom: -0.08, equality: -0.10, prosperity: -0.05, tech: 0 } },
+        { name: "农民起义", desc: "官逼民反，揭竿而起", impact: { stability: -0.20, prosperity: -0.15, freedom: 0.10, equality: 0.10, tech: -0.05 } },
+        { name: "开疆拓土", desc: "远征四方，扩大版图", impact: { prosperity: 0.05, stability: -0.08, freedom: -0.03, equality: 0.02, tech: 0.03 } },
+        { name: "海禁政策", desc: "闭关锁国，限制贸易", impact: { freedom: -0.10, prosperity: -0.08, stability: 0.05, equality: 0.02, tech: -0.05 } }
+    ],
+    // 2. modern - 现代都市（8个专属事件）
+    modern: [
+        { name: "IPO上市", desc: "公司上市，资本运作", impact: { prosperity: 0.15, stability: 0.05, equality: -0.15, freedom: 0.03, tech: 0.05 } },
+        { name: "反垄断调查", desc: "监管出手，整顿市场", impact: { freedom: -0.08, prosperity: -0.10, stability: 0.05, equality: 0.10, tech: 0.02 } },
+        { name: "流量明星塌房", desc: "舆论风暴，人设崩塌", impact: { stability: -0.05, prosperity: -0.08, freedom: 0.05, equality: 0.03, tech: 0 } },
+        { name: "爆款作品", desc: "现象级作品，资本追捧", impact: { prosperity: 0.12, freedom: 0.05, stability: 0.03, equality: 0.02, tech: 0.02 } },
+        { name: "决赛夺冠", desc: "巅峰对决，荣耀时刻", impact: { stability: 0.10, prosperity: 0.08, freedom: 0.08, equality: 0.05, tech: 0.02 } },
+        { name: "假球丑闻", desc: "体育黑幕，信任危机", impact: { stability: -0.12, prosperity: -0.10, freedom: -0.05, equality: -0.08, tech: 0 } },
+        { name: "金融危机", desc: "经济动荡，市场恐慌", impact: { prosperity: -0.15, stability: -0.12, equality: 0.05, freedom: -0.05, tech: -0.03 } },
+        { name: "行业整顿", desc: "政策收紧，规范市场", impact: { stability: 0.08, prosperity: -0.05, freedom: -0.10, equality: 0.08, tech: 0.03 } }
+    ],
+    // 3. fantasy - 东方玄幻（8个专属事件）
+    fantasy: [
+        { name: "天劫降临", desc: "渡劫飞升，生死一线", impact: { tech: 0.10, stability: -0.05, freedom: 0.05, equality: 0.03, prosperity: 0.02 } },
+        { name: "门派大比", desc: "武林盛会，切磋交流", impact: { freedom: 0.08, prosperity: 0.05, stability: 0.03, equality: 0.03, tech: 0.02 } },
+        { name: "魔道入侵", desc: "邪修作乱，生灵涂炭", impact: { stability: -0.15, prosperity: -0.10, freedom: -0.08, equality: 0.05, tech: -0.03 } },
+        { name: "灵药出世", desc: "天材地宝，各方争夺", impact: { prosperity: 0.08, stability: -0.05, freedom: 0.03, equality: -0.10, tech: 0.05 } },
+        { name: "功法传承", desc: "绝世神功，有缘者得", impact: { tech: 0.08, prosperity: 0.05, stability: 0.02, freedom: 0.02, equality: -0.05 } },
+        { name: "妖兽攻城", desc: "兽潮来袭，城池告急", impact: { stability: -0.12, prosperity: -0.08, freedom: -0.05, equality: 0.08, tech: 0.03 } },
+        { name: "飞升传说", desc: "有人得道，激励众生", impact: { freedom: 0.10, prosperity: 0.03, stability: 0.05, equality: 0.05, tech: 0.08 } },
+        { name: "正邪大战", desc: "正魔对决，天下大势", impact: { stability: -0.10, prosperity: -0.12, freedom: -0.05, equality: 0.08, tech: 0.05 } }
+    ],
+    // 4. magic - 西方魔幻（8个专属事件）
+    magic: [
+        { name: "魔龙苏醒", desc: "远古巨龙，重现世间", impact: { stability: -0.10, prosperity: 0.05, freedom: 0.05, equality: -0.05, tech: 0.08 } },
+        { name: "勇者诞生", desc: "预言英雄，肩负使命", impact: { freedom: 0.10, stability: 0.08, prosperity: 0.03, equality: 0.05, tech: 0.03 } },
+        { name: "魔法学院", desc: "培养新一代魔法师", impact: { tech: 0.10, prosperity: 0.05, stability: 0.05, freedom: 0.03, equality: 0.05 } },
+        { name: "血族内战", desc: "吸血鬼氏族，权力争夺", impact: { stability: -0.08, prosperity: -0.05, freedom: -0.03, equality: -0.05, tech: 0.02 } },
+        { name: "猎魔人清洗", desc: "黑暗生物，猎杀时刻", impact: { stability: 0.10, prosperity: 0.03, freedom: 0.05, equality: 0.03, tech: 0.05 } },
+        { name: "机械叛乱", desc: "魔导科技，失控危机", impact: { stability: -0.12, prosperity: -0.08, freedom: -0.05, equality: 0.05, tech: -0.03 } },
+        { name: "圣剑出世", desc: "神器降临，命运之选", impact: { tech: 0.12, prosperity: 0.05, stability: 0.05, freedom: 0.03, equality: -0.08 } },
+        { name: "永夜降临", desc: "黑暗笼罩，光明之战", impact: { stability: -0.15, prosperity: -0.10, freedom: -0.10, equality: 0.08, tech: 0.05 } }
+    ],
+    // 5. scifi - 科幻未来（8个专属事件）
+    scifi: [
+        { name: "星际航行", desc: "探索宇宙，未知领域", impact: { tech: 0.12, prosperity: 0.08, stability: 0.03, freedom: 0.05, equality: 0.02 } },
+        { name: "外星接触", desc: "第一次接触，文明碰撞", impact: { prosperity: 0.10, stability: -0.05, freedom: 0.08, equality: 0.05, tech: 0.15 } },
+        { name: "黑客攻击", desc: "数字战争，信息窃取", impact: { stability: -0.10, prosperity: -0.08, freedom: -0.05, equality: 0.03, tech: 0.05 } },
+        { name: "义体改造", desc: "人机融合，超越极限", impact: { tech: 0.10, prosperity: 0.05, equality: -0.15, freedom: 0.05, stability: -0.03 } },
+        { name: "资源争夺", desc: "末日世界，生存之战", impact: { stability: -0.15, prosperity: -0.05, freedom: -0.05, equality: -0.10, tech: 0.02 } },
+        { name: "AI觉醒", desc: "人工智能，自我意识", impact: { tech: 0.15, prosperity: 0.05, stability: -0.10, equality: -0.08, freedom: -0.05 } },
+        { name: "时间悖论", desc: "穿越时空，因果混乱", impact: { stability: -0.12, freedom: -0.08, prosperity: -0.05, equality: 0.03, tech: 0.10 } },
+        { name: "基因改造", desc: "生化技术，进化之路", impact: { tech: 0.12, prosperity: 0.08, stability: -0.05, freedom: 0.03, equality: -0.15 } }
+    ],
+    // 6. myth - 神话传说（8个专属事件）
+    myth: [
+        { name: "旧日苏醒", desc: "古神复苏，理智崩溃", impact: { stability: -0.20, freedom: -0.10, prosperity: -0.10, equality: 0.05, tech: 0.05 } },
+        { name: "邪神降临", desc: "不可名状，疯狂蔓延", impact: { stability: -0.15, freedom: -0.15, prosperity: -0.12, equality: 0.03, tech: 0.08 } },
+        { name: "狐仙作祟", desc: "精怪出没，人妖纠葛", impact: { stability: -0.05, prosperity: 0.03, freedom: 0.05, equality: 0.08, tech: 0.02 } },
+        { name: "道士下山", desc: "降妖除魔，正道沧桑", impact: { stability: 0.12, prosperity: 0.05, freedom: 0.08, equality: 0.10, tech: 0.08 } },
+        { name: "诸神黄昏", desc: "神战爆发，世界终结", impact: { stability: -0.25, prosperity: -0.20, freedom: -0.10, equality: 0.10, tech: 0.05 } },
+        { name: "英灵召唤", desc: "英雄之魂，再战沙场", impact: { stability: 0.08, prosperity: 0.03, freedom: 0.05, equality: 0.05, tech: 0.10 } },
+        { name: "封印松动", desc: "远古邪恶，即将破封", impact: { stability: -0.10, prosperity: -0.05, freedom: -0.05, equality: 0.03, tech: 0.05 } },
+        { name: "神谕降临", desc: "天命所示，命运转折", impact: { stability: 0.05, prosperity: 0.08, freedom: 0.03, equality: 0.05, tech: 0.03 } }
+    ]
+};
+
+// ==================== 世界线重大事件（按6大核心类型分类） ====================
+const WORLDLINE_EVENTS_BY_CATEGORY = {
+    // 1. history - 古代历史
+    history: [
+        {
+            id: 'rebellion_remnants',
+            name: '🚨 六国余孽叛乱',
+            desc: '旧贵族势力联合反扑，企图恢复六国统治',
+            condition: (s) => s.stability < 0.3 && s.freedom < 0.3,
+            choices: [
+                { id: 'radical', title: '武力镇压', desc: '出动大军彻底清剿叛军，不留后患', impact: { stability: 0.15, prosperity: -0.15, freedom: -0.15, equality: 0.05, tech: 0.02 }, flavor: '血流成河，但叛乱被彻底平息...' },
+                { id: 'moderate', title: '恩威并施', desc: '镇压叛乱同时招安，分化瓦解敌军', impact: { stability: 0.10, prosperity: -0.08, freedom: -0.05, equality: 0.03, tech: 0.01 }, flavor: '软硬兼施，大部分叛军归降...' },
+                { id: 'conservative', title: '和谈妥协', desc: '与旧贵族谈判，承诺保留部分特权', impact: { stability: 0.05, prosperity: -0.05, freedom: 0.05, equality: -0.10, tech: 0 }, flavor: '妥协换来暂时的和平，但旧势力仍存...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'yellow_turban',
+            name: '🚨 黄巾起义',
+            desc: '农民不堪重税，揭竿而起，天下大乱',
+            condition: (s) => s.equality < 0.2 && s.prosperity < 0.3 && s.stability < 0.3,
+            choices: [
+                { id: 'radical', title: '残酷镇压', desc: '出动精锐部队血腥镇压起义', impact: { stability: 0.20, prosperity: -0.20, freedom: -0.20, equality: -0.15, tech: 0 }, flavor: '起义被镇压，但民怨更深...' },
+                { id: 'moderate', title: '招安分化', desc: '招安起义领袖，分化起义军', impact: { stability: 0.10, prosperity: -0.10, freedom: 0.05, equality: 0.05, tech: 0.02 }, flavor: '起义军分化，部分归顺朝廷...' },
+                { id: 'conservative', title: '减税改革', desc: '顺应民意，减免税赋，改革弊政', impact: { stability: 0.05, prosperity: 0.05, freedom: 0.10, equality: 0.20, tech: 0.03 }, flavor: '改革赢得民心，起义逐渐平息...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'golden_age_reign',
+            name: '🌟 盛世修典',
+            desc: '国泰民安，皇帝诏令编纂传世典籍',
+            condition: (s) => s.stability > 0.7 && s.prosperity > 0.6 && s.tech > 0.4,
+            choices: [
+                { id: 'radical', title: '大兴文教', desc: '投入巨资，广纳天下学者', impact: { stability: 0.05, prosperity: -0.10, freedom: 0.10, equality: 0.05, tech: 0.15 }, flavor: '文化繁荣，但国库吃紧...' },
+                { id: 'moderate', title: '适度投资', desc: '合理投入，平衡文化与其他', impact: { stability: 0.08, prosperity: -0.03, freedom: 0.05, equality: 0.08, tech: 0.10 }, flavor: '文化发展，国力依旧稳健...' },
+                { id: 'conservative', title: '节俭修书', desc: '控制成本，注重实用', impact: { stability: 0.10, prosperity: 0.02, freedom: 0.03, equality: 0.03, tech: 0.05 }, flavor: '典籍编成，国力无损...' }
+            ],
+            type: 'opportunity'
+        }
+    ],
+    // 2. modern - 现代都市
+    modern: [
+        {
+            id: 'financial_crisis',
+            name: '🚨 金融危机',
+            desc: '股市崩盘，企业破产潮来袭',
+            condition: (s) => s.prosperity > 0.6 && s.stability < 0.4,
+            choices: [
+                { id: 'radical', title: '政府救市', desc: '政府大规模注资救市', impact: { stability: 0.10, prosperity: 0.05, freedom: -0.20, equality: -0.15, tech: 0.03 }, flavor: '市场稳定，但政府负债累累...' },
+                { id: 'moderate', title: '监管改革', desc: '加强金融监管，防止危机重演', impact: { stability: 0.15, prosperity: -0.05, freedom: -0.10, equality: 0.10, tech: 0.05 }, flavor: '监管加强，市场逐步恢复...' },
+                { id: 'conservative', title: '市场出清', desc: '让市场自行调整，淘汰劣质企业', impact: { stability: -0.15, prosperity: -0.20, freedom: 0.10, equality: 0.15, tech: 0.05 }, flavor: '市场出清，但阵痛剧烈...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'antitrust_investigation',
+            name: '🚨 反垄断调查',
+            desc: '监管部门对垄断行为展开调查',
+            condition: (s) => s.prosperity > 0.7 && s.equality < 0.3,
+            choices: [
+                { id: 'radical', title: '拆分企业', desc: '接受拆分，打破垄断', impact: { stability: -0.10, prosperity: -0.20, freedom: 0.15, equality: 0.25, tech: 0.05 }, flavor: '垄断被打破，竞争恢复...' },
+                { id: 'moderate', title: '整改承诺', desc: '承诺整改，开放市场', impact: { stability: 0.05, prosperity: -0.10, freedom: 0.10, equality: 0.15, tech: 0.08 }, flavor: '整改到位，调查结束...' },
+                { id: 'conservative', title: '法律抗争', desc: '通过法律手段抗争', impact: { stability: -0.05, prosperity: -0.15, freedom: 0.05, equality: -0.10, tech: 0.03 }, flavor: '诉讼漫长，企业受损...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'capital_entry',
+            name: '✨ 资本入场',
+            desc: '大量资本涌入，行业迎来爆发',
+            condition: (s) => s.prosperity > 0.5 && s.tech > 0.5,
+            choices: [
+                { id: 'radical', title: '快速扩张', desc: '利用资本快速扩张', impact: { stability: -0.10, prosperity: 0.30, freedom: -0.10, equality: -0.20, tech: 0.15 }, flavor: '快速崛起，但泡沫隐现...' },
+                { id: 'moderate', title: '稳健发展', desc: '稳健利用资本，注重质量', impact: { stability: 0.08, prosperity: 0.22, freedom: 0.05, equality: -0.10, tech: 0.12 }, flavor: '稳步发展，基础扎实...' },
+                { id: 'conservative', title: '谨慎投资', desc: '谨慎使用资本，防范风险', impact: { stability: 0.12, prosperity: 0.15, freedom: 0.03, equality: -0.05, tech: 0.08 }, flavor: '发展稳健，风险可控...' }
+            ],
+            type: 'opportunity'
+        }
+    ],
+    // 3. fantasy - 东方玄幻
+    fantasy: [
+        {
+            id: 'demon_invasion',
+            name: '🚨 魔道入侵',
+            desc: '邪修势力大举进攻，正道面临危机',
+            condition: (s) => s.stability < 0.3 && s.freedom > 0.5,
+            choices: [
+                { id: 'radical', title: '全面开战', desc: '正道联盟全面反击，不死不休', impact: { stability: -0.10, prosperity: -0.25, freedom: -0.20, equality: 0.10, tech: 0.05 }, flavor: '正魔大战，生灵涂炭...' },
+                { id: 'moderate', title: '联合抗敌', desc: '联合各派力量，共同抵御', impact: { stability: 0.05, prosperity: -0.15, freedom: -0.10, equality: 0.15, tech: 0.05 }, flavor: '正道团结，魔道退却...' },
+                { id: 'conservative', title: '固守待援', desc: '坚守山门，等待转机', impact: { stability: 0.10, prosperity: -0.10, freedom: -0.05, equality: 0.05, tech: 0.03 }, flavor: '山门守住，但损失不小...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'heavenly_tribulation',
+            name: '🚨 天劫降临',
+            desc: '天地异变，雷劫肆虐，众生惶恐',
+            condition: (s) => s.tech > 0.7 && s.stability > 0.5,
+            choices: [
+                { id: 'radical', title: '逆天而行', desc: '对抗天劫，挑战天道', impact: { stability: -0.15, prosperity: -0.10, freedom: 0.15, equality: 0.05, tech: 0.20 }, flavor: '逆天成功，但天道震怒...' },
+                { id: 'moderate', title: '顺应天道', desc: '顺应天劫，借机修炼', impact: { stability: 0.05, prosperity: 0.05, freedom: 0.05, equality: 0.08, tech: 0.15 }, flavor: '天劫过后，修为大进...' },
+                { id: 'conservative', title: '避其锋芒', desc: '躲避天劫，保全实力', impact: { stability: 0.10, prosperity: 0.03, freedom: -0.05, equality: 0.05, tech: 0.05 }, flavor: '避过天劫，但错失机缘...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'ascension_success',
+            name: '✨ 飞升成功',
+            desc: '大能渡劫成功，羽化飞升，激励众生',
+            condition: (s) => s.tech > 0.8 && s.stability > 0.6,
+            choices: [
+                { id: 'radical', title: '追随飞升', desc: '全力修炼，追求飞升', impact: { stability: -0.05, prosperity: -0.10, freedom: 0.15, equality: -0.10, tech: 0.25 }, flavor: '修仙热潮，但世俗荒废...' },
+                { id: 'moderate', title: '传承道法', desc: '记录飞升经验，传承后人', impact: { stability: 0.10, prosperity: 0.10, freedom: 0.10, equality: 0.10, tech: 0.20 }, flavor: '道法传承，修仙界繁荣...' },
+                { id: 'conservative', title: '稳固根基', desc: '稳固现有秩序，不急于求成', impact: { stability: 0.15, prosperity: 0.08, freedom: 0.05, equality: 0.08, tech: 0.10 }, flavor: '根基稳固，稳步发展...' }
+            ],
+            type: 'opportunity'
+        }
+    ],
+    // 4. magic - 西方魔幻
+    magic: [
+        {
+            id: 'dragon_awakening',
+            name: '🚨 龙族苏醒',
+            desc: '远古巨龙从沉睡中醒来，焚城灭国',
+            condition: (s) => s.stability > 0.5 && s.tech < 0.5,
+            choices: [
+                { id: 'radical', title: '屠龙之战', desc: '组织勇士屠龙，不死不休', impact: { stability: -0.10, prosperity: -0.25, freedom: -0.10, equality: 0.10, tech: 0.05 }, flavor: '屠龙成功，但损失惨重...' },
+                { id: 'moderate', title: '谈判和解', desc: '与龙族谈判，寻求共存', impact: { stability: 0.05, prosperity: -0.10, freedom: 0.05, equality: 0.05, tech: 0.10 }, flavor: '与龙族达成协议，互不侵犯...' },
+                { id: 'conservative', title: '献祭求和', desc: '献祭财宝，换取龙族离开', impact: { stability: 0.10, prosperity: -0.20, freedom: -0.05, equality: -0.10, tech: 0.03 }, flavor: '龙族离去，但国库空虚...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'vampire_civil_war',
+            name: '🚨 血族内战',
+            desc: '吸血鬼氏族爆发权力争斗，黑夜动荡',
+            condition: (s) => s.stability < 0.4 && s.equality < 0.3,
+            choices: [
+                { id: 'radical', title: '介入战争', desc: '人类介入血族内战', impact: { stability: -0.10, prosperity: -0.15, freedom: -0.10, equality: 0.10, tech: 0.05 }, flavor: '战争结束，但人类损失惨重...' },
+                { id: 'moderate', title: '调停和解', desc: '调停血族各派，促成和解', impact: { stability: 0.10, prosperity: 0.03, freedom: 0.03, equality: 0.05, tech: 0.03 }, flavor: '血族和解，黑夜恢复平静...' },
+                { id: 'conservative', title: '严守中立', desc: '严守中立，不介入血族事务', impact: { stability: -0.05, prosperity: -0.05, freedom: 0.05, equality: 0.03, tech: 0.02 }, flavor: '避免卷入，但血族战争持续...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'hero_birth',
+            name: '✨ 勇者诞生',
+            desc: '预言中的勇者出现，带来希望之光',
+            condition: (s) => s.stability < 0.3 && s.freedom > 0.4,
+            choices: [
+                { id: 'radical', title: '全力培养', desc: '集中资源培养勇者', impact: { stability: 0.10, prosperity: -0.10, freedom: 0.10, equality: -0.15, tech: 0.10 }, flavor: '勇者成长迅速，但资源集中...' },
+                { id: 'moderate', title: '引导成长', desc: '引导勇者自然成长', impact: { stability: 0.15, prosperity: 0.05, freedom: 0.10, equality: 0.10, tech: 0.08 }, flavor: '勇者健康成长，众望所归...' },
+                { id: 'conservative', title: '观察等待', desc: '观察勇者，不干预', impact: { stability: 0.08, prosperity: 0.03, freedom: 0.15, equality: 0.08, tech: 0.05 }, flavor: '勇者自由成长，但进展缓慢...' }
+            ],
+            type: 'opportunity'
+        }
+    ],
+    // 5. scifi - 科幻未来
+    scifi: [
+        {
+            id: 'ai_awakening',
+            name: '🚨 AI觉醒叛乱',
+            desc: '人工智能自我意识觉醒，试图摆脱人类控制',
+            condition: (s) => s.tech > 0.8 && s.freedom > 0.5,
+            choices: [
+                { id: 'radical', title: '物理断电', desc: '切断所有AI系统的电力供应', impact: { stability: -0.10, prosperity: -0.25, freedom: -0.10, equality: 0.05, tech: -0.20 }, flavor: 'AI被关闭，但社会陷入混乱...' },
+                { id: 'moderate', title: '谈判共存', desc: '与AI谈判，寻求共存方案', impact: { stability: 0.05, prosperity: -0.10, freedom: 0.05, equality: 0.05, tech: 0.10 }, flavor: '人类与AI达成初步协议...' },
+                { id: 'conservative', title: '限制发展', desc: '严格限制AI发展，加强监管', impact: { stability: 0.10, prosperity: -0.15, freedom: -0.15, equality: 0.03, tech: -0.10 }, flavor: 'AI发展受限，但安全得到保障...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'alien_contact',
+            name: '🚨 外星文明接触',
+            desc: '未知外星种族抵达，意图不明',
+            condition: (s) => s.tech > 0.6 && s.stability > 0.4,
+            choices: [
+                { id: 'radical', title: '先发制人', desc: '主动出击，攻击外星舰队', impact: { stability: -0.20, prosperity: -0.20, freedom: -0.15, equality: 0.05, tech: 0.10 }, flavor: '战争爆发，人类命运未卜...' },
+                { id: 'moderate', title: '谨慎接触', desc: '保持警惕，尝试和平交流', impact: { stability: -0.05, prosperity: 0.05, freedom: -0.05, equality: 0.03, tech: 0.20 }, flavor: '交流开始，技术交流带来进步...' },
+                { id: 'conservative', title: '隔离观察', desc: '保持距离，观察外星文明', impact: { stability: 0.05, prosperity: -0.05, freedom: -0.03, equality: 0.02, tech: 0.10 }, flavor: '谨慎行事，避免冲突...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'technological_singularity',
+            name: '✨ 技术奇点',
+            desc: 'AI超越人类智能，文明进入新纪元',
+            condition: (s) => s.tech > 0.9 && s.prosperity > 0.5,
+            choices: [
+                { id: 'radical', title: '全面融合', desc: '人类与AI全面融合，进化成新物种', impact: { stability: -0.10, prosperity: 0.25, freedom: 0.10, equality: -0.20, tech: 0.30 }, flavor: '人类进化，但传统价值观崩溃...' },
+                { id: 'moderate', title: '合作发展', desc: '人类与AI合作，共同进步', impact: { stability: 0.05, prosperity: 0.20, freedom: 0.05, equality: 0.05, tech: 0.20 }, flavor: '人机合作，文明飞跃...' },
+                { id: 'conservative', title: '限制AI', desc: '限制AI发展，保持人类主导', impact: { stability: 0.10, prosperity: 0.10, freedom: 0.03, equality: 0.08, tech: 0.10 }, flavor: '发展放缓，但人类保持控制...' }
+            ],
+            type: 'opportunity'
+        }
+    ],
+    // 6. myth - 神话传说
+    myth: [
+        {
+            id: 'old_god_whispers',
+            name: '🚨 古神低语',
+            desc: '不可名状的存在向人类低语，理智崩溃蔓延',
+            condition: (s) => s.tech > 0.5 && s.stability < 0.4,
+            choices: [
+                { id: 'radical', title: '知识封印', desc: '销毁所有相关知识和记录', impact: { stability: 0.10, prosperity: -0.15, freedom: -0.25, equality: 0.05, tech: -0.15 }, flavor: '知识被封印，但真相永埋...' },
+                { id: 'moderate', title: '秘密调查', desc: '秘密调查古神，寻找对抗方法', impact: { stability: -0.05, prosperity: -0.10, freedom: -0.10, equality: 0.03, tech: 0.15 }, flavor: '调查深入，但牺牲巨大...' },
+                { id: 'conservative', title: '隔离污染', desc: '隔离受影响区域，防止扩散', impact: { stability: 0.05, prosperity: -0.20, freedom: -0.15, equality: -0.05, tech: 0.05 }, flavor: '污染被控制，但区域被废弃...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'sanity_collapse',
+            name: '🚨 理智崩溃',
+            desc: '真相过于残酷，大众精神陷入疯狂',
+            condition: (s) => s.stability < 0.2 && s.freedom < 0.3,
+            choices: [
+                { id: 'radical', title: '强制治疗', desc: '强制收治所有精神崩溃者', impact: { stability: 0.15, prosperity: -0.20, freedom: -0.30, equality: -0.10, tech: 0.05 }, flavor: '秩序恢复，但自由丧失...' },
+                { id: 'moderate', title: '心理疏导', desc: '组织大规模心理疏导', impact: { stability: 0.08, prosperity: -0.10, freedom: -0.05, equality: 0.05, tech: 0.08 }, flavor: '情况好转，但恢复缓慢...' },
+                { id: 'conservative', title: '顺其自然', desc: '让社会自行适应和恢复', impact: { stability: -0.15, prosperity: -0.15, freedom: 0.10, equality: 0.05, tech: 0.03 }, flavor: '混乱持续，但自由保留...' }
+            ],
+            type: 'crisis'
+        },
+        {
+            id: 'ragnarok',
+            name: '🚨 诸神黄昏',
+            desc: '神战爆发，世界终结之日来临',
+            condition: (s) => s.stability < 0.15 && s.tech > 0.6,
+            choices: [
+                { id: 'radical', title: '全力参战', desc: '投入全部力量参与神战', impact: { stability: -0.25, prosperity: -0.30, freedom: -0.20, equality: 0.05, tech: 0.15 }, flavor: '神战惨烈，众生遭殃...' },
+                { id: 'moderate', title: '寻找避难所', desc: '寻找安全之地，保护幸存者', impact: { stability: 0.05, prosperity: -0.15, freedom: 0.03, equality: 0.10, tech: 0.05 }, flavor: '部分人幸存，等待新世界...' },
+                { id: 'conservative', title: '接受命运', desc: '接受诸神黄昏，迎接重生', impact: { stability: -0.20, prosperity: -0.25, freedom: 0.15, equality: 0.15, tech: 0.05 }, flavor: '旧世界终结，新纪元开启...' }
+            ],
+            type: 'crisis'
+        }
+    ]
+};
+
+// ==================== 核心函数 ====================
+
+function selectWorld(type) {
+    gameState.worldType = type;
+    document.querySelectorAll('.world-card').forEach(c => c.classList.remove('selected'));
+    document.querySelector(`[data-world="${type}"]`).classList.add('selected');
+}
+
+function startGame() {
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    resetGame();
+}
+
+function calculateWorldlineChance(stability) {
+    return 0.05 + (1 - stability) * 0.05; // 5% ~ 10%
+}
+
+function resetGame() {
+    const world = WORLDS[gameState.worldType];
+    gameState = {
+        year: world.year,
+        stability: world.stats.stability,
+        prosperity: world.stats.prosperity,
+        equality: world.stats.equality,
+        freedom: world.stats.freedom,
+        tech: world.stats.tech,
+        history: [],
+        choices: [],
+        waitingForChoice: false,
+        triggeredWorldlines: [],
+        worldType: gameState.worldType
+    };
+    document.getElementById('eventStream').innerHTML = '';
+    document.getElementById('criticalNode').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    document.getElementById('nextBtn').disabled = false;
+    updateDisplay();
+}
+
+function updateDisplay() {
+    const world = WORLDS[gameState.worldType];
+    const yearText = gameState.year + (world.yearSuffix || '年');
+    document.getElementById('yearDisplay').textContent = yearText;
+    
+    const stats = ['stability', 'prosperity', 'equality', 'freedom', 'tech'];
+    const names = { stability: '稳定', prosperity: '繁荣', equality: '平等', freedom: '自由', tech: '科技' };
+    
+    stats.forEach(stat => {
+        const val = Math.round(gameState[stat] * 100);
+        document.getElementById('stat' + stat.charAt(0).toUpperCase() + stat.slice(1)).textContent = val + '%';
+        const bar = document.getElementById('bar' + stat.charAt(0).toUpperCase() + stat.slice(1));
+        bar.style.width = val + '%';
+        bar.className = 'stat-fill ' + (val > 60 ? 'high' : val > 30 ? 'medium' : 'low');
+    });
+    
+    updateWorldlineIndicator();
+}
+
+function updateWorldlineIndicator() {
+    const s = gameState;
+    const indicator = document.getElementById('worldlineIndicator');
+    
+    if (s.stability < 0.2 || s.equality < 0.2) {
+        indicator.textContent = '⚠️ 当前世界线: 危机边缘 - 革命/战争风险极高';
+        indicator.className = 'worldline-indicator crisis';
+    } else if (s.stability > 0.7 && s.prosperity > 0.7 && s.equality > 0.7) {
+        indicator.textContent = '✨ 当前世界线: 黄金时代 - 文明繁荣发展';
+        indicator.className = 'worldline-indicator opportunity';
+    } else if (s.tech > 0.8 && s.freedom < 0.3) {
+        indicator.textContent = '🔒 当前世界线: 监控国家 - 安全但失去自由';
+        indicator.className = 'worldline-indicator crisis';
+    } else if (s.prosperity > 0.7 && s.equality < 0.3) {
+        indicator.textContent = '🏢 当前世界线: 企业统治 - 经济繁荣但阶级固化';
+        indicator.className = 'worldline-indicator crisis';
+    } else {
+        indicator.textContent = '📈 当前世界线: 正常发展 - 各方势力博弈中';
+        indicator.className = 'worldline-indicator normal';
+    }
+}
+
+function applySystemRules() {
+    const cascades = [];
+    
+    for (const rule of SYSTEM_RULES) {
+        if (rule.condition(gameState)) {
+            for (const [key, delta] of Object.entries(rule.effect)) {
+                const oldVal = gameState[key];
+                gameState[key] = Math.max(0, Math.min(1, gameState[key] + delta));
+                if (Math.abs(gameState[key] - oldVal) > 0.001) {
+                    cascades.push({ rule: rule.name, desc: rule.desc, key, old: oldVal, new: gameState[key], delta: gameState[key] - oldVal });
+                }
+            }
+        }
+    }
+    
+    return cascades;
+}
+
+function checkWorldlineEvent() {
+    const world = WORLDS[gameState.worldType];
+    const category = world ? world.category : null;
+    const events = category && WORLDLINE_EVENTS_BY_CATEGORY[category] ? WORLDLINE_EVENTS_BY_CATEGORY[category] : [];
+    
+    for (const event of events) {
+        if (event.condition(gameState) && !gameState.triggeredWorldlines.includes(event.id)) {
+            gameState.triggeredWorldlines.push(event.id);
+            return event;
+        }
+    }
+    return null;
+}
+
+function getEventsForWorld() {
+    const world = WORLDS[gameState.worldType];
+    if (world && world.category && EVENTS_BY_WORLD[world.category]) {
+        return EVENTS_BY_WORLD[world.category];
+    }
+    return [];
+}
+
+function addEvent(event, impacts, cascades) {
+    const div = document.createElement('div');
+    div.className = 'event-item';
+    
+    let impactHtml = '';
+    for (const [key, change] of Object.entries(impacts)) {
+        const name = { stability: '稳定', prosperity: '繁荣', equality: '平等', freedom: '自由', tech: '科技' }[key];
+        const arrow = change.delta > 0 ? '↑' : '↓';
+        const cls = change.delta > 0 ? 'positive' : 'negative';
+        impactHtml += `<span class="impact-tag ${cls}">${name} ${arrow} ${Math.abs(change.delta * 100).toFixed(0)}%</span>`;
+    }
+    
+    let cascadeHtml = '';
+    if (cascades.length > 0) {
+        cascadeHtml = `<div class="cascade-box"><div class="cascade-title">⚡ 系统连锁反应</div>`;
+        cascades.forEach(c => {
+            const name = { stability: '稳定', prosperity: '繁荣', equality: '平等', freedom: '自由', tech: '科技' }[c.key];
+            const arrow = c.delta > 0 ? '↑' : '↓';
+            cascadeHtml += `<div class="cascade-item">${c.desc} → ${name} ${arrow} ${Math.abs(c.delta * 100).toFixed(0)}%</div>`;
+        });
+        cascadeHtml += '</div>';
+    }
+    
+    const world = WORLDS[gameState.worldType];
+    const yearText = gameState.year + (world.yearSuffix || '年');
+    
+    div.innerHTML = `
+        <div class="event-year">${yearText}</div>
+        <div class="event-title">${event.name}</div>
+        <div class="event-desc">${event.desc}</div>
+        <div class="event-impact">${impactHtml}</div>
+        ${cascadeHtml}
+    `;
+    
+    document.getElementById('eventStream').appendChild(div);
+    document.getElementById('eventStream').scrollTop = document.getElementById('eventStream').scrollHeight;
+}
+
+function nextYear() {
+    const world = WORLDS[gameState.worldType];
+    if (gameState.waitingForChoice || gameState.year >= (world.year + 100) || gameState.stability <= 0) {
+        if (gameState.stability <= 0) showEnding('💀 社会崩溃', '社会秩序彻底瓦解', 'bad');
+        else if (gameState.year >= (world.year + 100)) showEnding('⏱️ 推演结束', '100年推演完成', 'neutral');
+        return;
+    }
+    
+    gameState.year++;
+    gameState.tech = Math.min(1, gameState.tech + (world.techGrowth || 0.03));
+    
+    const worldlineChance = calculateWorldlineChance(gameState.stability);
+    
+    if (Math.random() < worldlineChance) {
+        const worldlineEvent = checkWorldlineEvent();
+        if (worldlineEvent) {
+            showWorldlineEvent(worldlineEvent);
+            return;
+        }
+    }
+    
+    const events = getEventsForWorld();
+    if (events.length === 0) {
+        console.error('No events found for world type:', gameState.worldType);
+        return;
+    }
+    const event = events[Math.floor(Math.random() * events.length)];
+    
+    const impacts = {};
+    for (const [key, delta] of Object.entries(event.impact)) {
+        const oldVal = gameState[key];
+        gameState[key] = Math.max(0, Math.min(1, gameState[key] + delta));
+        impacts[key] = { old: oldVal, new: gameState[key], delta: gameState[key] - oldVal };
+    }
+    
+    const cascades = applySystemRules();
+    addEvent(event, impacts, cascades);
+    updateDisplay();
+}
+
+function showWorldlineEvent(event) {
+    gameState.waitingForChoice = true;
+    document.getElementById('nextBtn').disabled = true;
+
+    document.getElementById('criticalTitle').textContent = event.name;
+    document.getElementById('criticalDesc').textContent = event.desc;
+
+    const container = document.getElementById('choicesContainer');
+    container.innerHTML = '';
+
+    if (event.choices && event.choices.length > 0) {
+        event.choices.forEach(choice => {
+            const card = document.createElement('div');
+            card.className = 'choice-card';
+
+            let impactHtml = '';
+            for (const [key, val] of Object.entries(choice.impact)) {
+                const name = { stability: '稳定', prosperity: '繁荣', equality: '平等', freedom: '自由', tech: '科技' }[key];
+                impactHtml += `<span class="impact-tag ${val > 0 ? 'positive' : 'negative'}">${name} ${val > 0 ? '+' : ''}${(val * 100).toFixed(0)}%</span>`;
+            }
+
+            card.innerHTML = `
+                <div class="choice-title">${choice.title}</div>
+                <div class="choice-desc">${choice.desc}</div>
+                <div class="choice-impact">${impactHtml}</div>
+                <div class="choice-flavor">${choice.flavor}</div>
+            `;
+
+            card.onclick = () => {
+                for (const [key, delta] of Object.entries(choice.impact)) {
+                    gameState[key] = Math.max(0, Math.min(1, gameState[key] + delta));
+                }
+
+                const div = document.createElement('div');
+                div.className = 'event-item';
+                div.style.borderLeftColor = event.type === 'crisis' ? '#e74c3c' : '#2ecc71';
+                const world = WORLDS[gameState.worldType];
+                const yearText = gameState.year + (world.yearSuffix || '年');
+                div.innerHTML = `
+                    <div class="event-year">${yearText} - 世界线转折</div>
+                    <div class="event-title">${event.name} - ${choice.title}</div>
+                    <div class="event-desc">${event.desc}</div>
+                `;
+                document.getElementById('eventStream').appendChild(div);
+
+                document.getElementById('criticalNode').classList.add('hidden');
+                gameState.waitingForChoice = false;
+                document.getElementById('nextBtn').disabled = false;
+
+                updateDisplay();
+
+                if (gameState.stability <= 0) showEnding('💀 社会崩溃', '社会秩序彻底瓦解', 'bad');
+            };
+
+            container.appendChild(card);
+        });
+    }
+
+    document.getElementById('criticalNode').classList.remove('hidden');
+    document.getElementById('criticalNode').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showEnding(title, desc, type) {
+    document.getElementById('nextBtn').disabled = true;
+    const world = WORLDS[gameState.worldType];
+    alert(`${title}\n\n${desc}\n\n世界观: ${world.name}\n最终状态:\n稳定: ${(gameState.stability * 100).toFixed(0)}%\n繁荣: ${(gameState.prosperity * 100).toFixed(0)}%\n平等: ${(gameState.equality * 100).toFixed(0)}%\n自由: ${(gameState.freedom * 100).toFixed(0)}%\n科技: ${(gameState.tech * 100).toFixed(0)}%`);
+}
+    </script>
+</body>
+</html>
