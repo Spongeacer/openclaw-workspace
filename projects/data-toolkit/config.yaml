@@ -1,0 +1,143 @@
+# 数据抓取工具配置
+# Data Toolkit Configuration
+
+# 数据存储目录
+# Data storage directories
+data_dir: data
+data_dir_price: data/price
+data_dir_news: data/news
+data_dir_excel: data/excel
+
+# 输出目录
+# Output directory
+output_dir: output
+
+# HTTP请求配置
+# HTTP request configuration
+headers:
+  User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0
+  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+  Accept-Encoding: gzip, deflate, br
+  Connection: keep-alive
+
+# ========== 价格监控配置 (monitor.py) ==========
+# ========== Price Monitor Configuration ==========
+
+# 价格变化阈值 (如 0.05 表示 5%)
+# Price change threshold (e.g., 0.05 means 5%)
+price_threshold: 0.05
+
+# 监控商品列表
+# Products to monitor
+products:
+  # 示例配置 - 请根据实际网站修改选择器
+  # Example config - modify selectors based on actual website
+  - name: "示例商品1"
+    url: "https://example.com/product/1"
+    enabled: false  # 启用前设为 true
+    selectors:
+      name: "h1.product-title"      # 商品名称选择器
+      price: ".price .amount"        # 价格选择器
+      currency: ".price .currency"   # 货币选择器
+  
+  - name: "示例商品2"
+    url: "https://example.com/product/2"
+    enabled: false
+    selectors:
+      name: "h1"
+      price: ".current-price"
+      currency: ".currency-symbol"
+
+# ========== 新闻监控配置 (news_monitor.py) ==========
+# ========== News Monitor Configuration ==========
+
+# 监控关键词列表
+# Keywords to monitor
+keywords:
+  - 人工智能
+  - AI
+  - 机器学习
+  - 深度学习
+  - 大模型
+
+# 新闻源配置
+# News sources configuration
+sources:
+  # RSS源示例
+  - name: "科技新闻RSS"
+    type: rss
+    url: "https://example.com/tech/rss"
+    enabled: false
+  
+  # 网页抓取示例
+  - name: "新闻网站"
+    type: web
+    url: "https://example.com/news"
+    enabled: false
+    selectors:
+      container: "article.news-item"    # 文章容器
+      title: "h2.title"                 # 标题
+      link: "a.read-more"               # 链接
+      time: "time.publish-date"         # 发布时间
+      summary: ".summary"               # 摘要
+
+# 每源最大抓取文章数
+# Max articles per source
+max_articles_per_source: 10
+
+# 摘要长度
+# Summary length
+summary_length: 200
+
+# 历史记录最大条数
+# Max history entries
+max_history: 1000
+
+# ========== Excel处理配置 (excel_processor.py) ==========
+# ========== Excel Processor Configuration ==========
+
+excel:
+  # 默认读取的工作表 (0表示第一个，或填写工作表名称)
+  # Default sheet to read (0 for first, or sheet name)
+  default_sheet: 0
+  
+  # 表头所在行 (0表示第一行)
+  # Header row (0 for first row)
+  header_row: 0
+  
+  # 文件编码
+  # File encoding
+  encoding: utf-8
+  
+  # 日期格式
+  # Date format
+  date_format: "%Y-%m-%d"
+
+# ========== 合规声明 ==========
+# ========== Compliance Statement ==========
+
+# 本工具仅用于抓取公开可访问的数据
+# This tool is for scraping publicly accessible data only
+#
+# 使用本工具时，请遵守：
+# When using this tool, please comply with:
+# 1. 目标网站的 robots.txt 规则
+#    Target website's robots.txt rules
+# 2. 目标网站的服务条款
+#    Target website's Terms of Service
+# 3. 适用的数据保护法规 (如 GDPR, CCPA 等)
+#    Applicable data protection regulations (GDPR, CCPA, etc.)
+# 4. 尊重网站的访问频率限制
+#    Respect website's rate limits
+#
+# 禁止用于：
+# Prohibited uses:
+# - 抓取非公开数据或需要登录的私有数据
+#   Scraping non-public or private data requiring login
+# - 绕过反爬虫机制
+#   Bypassing anti-scraping mechanisms
+# - 抓取个人隐私信息
+#   Scraping personal private information
+# - 对目标网站造成过大负载
+#   Causing excessive load on target websites

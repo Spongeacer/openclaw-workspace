@@ -1,0 +1,118 @@
+# 项目配置文件
+# Project Configuration File
+
+# 通用配置 / General Settings
+app:
+  name: "Data Toolkit"
+  version: "1.0.0"
+  debug: false
+  
+# 数据目录配置 / Data Directory Settings
+paths:
+  data_raw: "./data/raw"
+  data_processed: "./data/processed"
+  output_charts: "./output/charts"
+  output_reports: "./output/reports"
+  logs: "./logs"
+
+# 请求配置 / Request Settings
+request:
+  # 请求间隔（秒）/ Request interval in seconds
+  delay: 2
+  # 超时时间（秒）/ Timeout in seconds
+  timeout: 30
+  # 重试次数 / Retry count
+  retries: 3
+  # User-Agent
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+# 价格监控配置 / Price Monitor Settings
+price_monitor:
+  # 监控商品列表 / Products to monitor
+  products:
+    - name: "示例商品1 / Sample Product 1"
+      url: "https://example.com/product/1"
+      selector: ".price"
+      alert_threshold: 100.0
+    - name: "示例商品2 / Sample Product 2"
+      url: "https://example.com/product/2"
+      selector: ".price-current"
+      alert_threshold: 200.0
+  
+  # 监控频率 / Monitor frequency
+  schedule:
+    # 每X小时检查一次 / Check every X hours
+    interval_hours: 6
+    # 或指定时间（24小时制）/ Or specify time (24h format)
+    # daily_at: "09:00"
+
+# 新闻监控配置 / News Monitor Settings
+news_monitor:
+  # 监控源 / News sources
+  sources:
+    - name: "示例新闻源 / Sample News"
+      url: "https://example.com/news"
+      selector:
+        item: ".news-item"
+        title: ".title"
+        link: "a"
+        time: ".time"
+  
+  # 监控关键词 / Keywords to monitor
+  keywords:
+    - "人工智能"
+    - "AI"
+    - "Python"
+    - "数据科学"
+  
+  # 日报生成时间 / Daily report generation time
+  report_time: "20:00"
+  
+  # 情感分析 / Sentiment analysis
+  sentiment_analysis:
+    enabled: true
+    # 使用简单的关键词匹配 / Use simple keyword matching
+    positive_words: ["增长", "突破", "成功", "创新", "利好"]
+    negative_words: ["下降", "亏损", "失败", "危机", "风险"]
+
+# Excel处理配置 / Excel Processor Settings
+excel_processor:
+  # 输入文件目录 / Input files directory
+  input_dir: "./data/excel_input"
+  
+  # 合并配置 / Merge configuration
+  merge:
+    # 合并后的文件名 / Merged file name
+    output_name: "merged_data.xlsx"
+    # 需要合并的sheet名称 / Sheet names to merge
+    sheets: ["Sheet1", "Data"]
+    # 主键列 / Primary key column
+    key_column: "id"
+  
+  # 报表生成配置 / Report generation
+  report:
+    # 报表模板 / Report template
+    template: "./config/report_template.xlsx"
+    # 输出格式 / Output format
+    format: "xlsx"
+    # 是否包含图表 / Include charts
+    include_charts: true
+
+# 通知配置 / Notification Settings
+notification:
+  # 邮件通知 / Email notification
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    sender: "your_email@example.com"
+    # 密码请在 .env 文件中配置 / Password in .env file
+    recipients:
+      - "recipient@example.com"
+  
+  # Webhook通知 / Webhook notification
+  webhook:
+    enabled: false
+    url: "https://hooks.example.com/webhook"
+    headers:
+      Content-Type: "application/json"
