@@ -1,0 +1,206 @@
+# ============================================================
+# YouTube 播客转中文语音合成系统 - 业务配置文件
+# ============================================================
+# 此文件包含音色池、模型参数等业务配置
+# 敏感信息（API Key）建议通过环境变量配置
+# ============================================================
+
+# -----------------------------------------------------------------------------
+# TTS 厂商配置
+# -----------------------------------------------------------------------------
+providers:
+
+  # -------------------- StepFun 配置 --------------------
+  stepfun:
+    # API 基础配置
+    base_url: "https://api.stepfun.com/v1"
+    timeout: 30                    # 请求超时时间（秒）
+    max_retries: 3                 # 最大重试次数
+    
+    # 模型配置
+    chat_model: "step-1-8k"        # 对话模型（用于翻译/文本处理）
+    tts_model: "step-tts-mini"     # TTS 模型
+    
+    # 音色池配置
+    voice_pool:
+      # 男性音色
+      male:
+        - "cixingnansheng"         # 磁性男声（默认）
+        - "xiaoshun"               # 小顺
+        - "xiaochen"               # 小陈
+        - "xiaoming"               # 小明
+      # 女性音色
+      female:
+        - "cixingnvsheng"          # 磁性女声（默认）
+        - "xiaoxiao"               # 小晓
+        - "xiaoyan"                # 小燕
+        - "xiaomei"                # 小美
+      default_male: "cixingnansheng"
+      default_female: "cixingnvsheng"
+    
+    # TTS 合成参数
+    speed: 1.0                     # 语速倍率 (0.5 ~ 2.0)
+    volume: 1.0                    # 音量倍率 (0.0 ~ 2.0)
+    
+    # 情绪标签映射表：翻译层 -> StepFun API
+    emotion_mapping:
+      # 基础情绪
+      neutral: "neutral"           # 中性
+      happy: "happy"               # 开心
+      sad: "sad"                   # 悲伤
+      angry: "angry"               # 愤怒
+      fearful: "fearful"           # 恐惧
+      surprised: "surprised"       # 惊讶
+      disgusted: "disgusted"       # 厌恶
+      # 播客专用情绪
+      excited: "excited"           # 兴奋
+      calm: "calm"                 # 平静
+      curious: "curious"           # 好奇
+      empathetic: "empathetic"     # 共情
+      professional: "professional" # 专业
+      humorous: "humorous"         # 幽默
+      questioning: "questioning"   # 疑问
+      storytelling: "storytelling" # 讲故事
+
+  # -------------------- MiniMax 配置 --------------------
+  minimax:
+    # API 基础配置
+    base_url: "https://api.minimax.chat/v1"
+    timeout: 30
+    max_retries: 3
+    
+    # 模型配置
+    chat_model: "abab6-chat"
+    tts_model: "speech-01-turbo"
+    
+    # 音色池配置
+    voice_pool:
+      # 男性音色
+      male:
+        - "male-qn-qingse"         # 青涩男声（默认）
+        - "male-qn-jingying"       # 精英男声
+        - "male-qn-badao"          # 霸道男声
+        - "male-qn-daxuesheng"     # 大学生男声
+      # 女性音色
+      female:
+        - "female-shaonv"          # 少女声（默认）
+        - "female-yujie"           # 御姐声
+        - "female-chengshu"        # 成熟女声
+        - "female-tianmei"         # 甜美女声
+      default_male: "male-qn-qingse"
+      default_female: "female-shaonv"
+    
+    # TTS 合成参数
+    speed: 1.0                     # 语速倍率 (0.5 ~ 2.0)
+    volume: 10                     # 音量等级 (0 ~ 10)
+    pitch: 0                       # 音调调整 (-10 ~ 10)
+
+# -----------------------------------------------------------------------------
+# Whisper 语音识别配置
+# -----------------------------------------------------------------------------
+whisper:
+  # 模型配置
+  model_size: "large-v3"           # 模型大小: tiny/base/small/medium/large/large-v2/large-v3
+  
+  # 设备配置
+  device: "auto"                   # 计算设备: cpu/cuda/auto
+  compute_type: "float16"          # 计算精度: int8/float16/float32/default
+  
+  # 批处理配置
+  batch_size: 16                   # 批处理大小 (1 ~ 64)
+  
+  # 说话人分离配置 (Diarization)
+  min_speakers: null               # 最小说话人数 (1 ~ 10, null=自动)
+  max_speakers: null               # 最大说话人数 (1 ~ 10, null=自动)
+  
+  # 语言配置
+  language: "zh"                   # 主要语言代码 (zh/en/ja/ko/...)
+  
+  # VAD (语音活动检测) 配置
+  vad_filter: true                 # 启用 VAD 过滤
+  vad_parameters:
+    threshold: 0.5                 # VAD 阈值
+    min_speech_duration_ms: 250    # 最小语音片段时长（毫秒）
+    max_speech_duration_s: 30      # 最大语音片段时长（秒）
+    min_silence_duration_ms: 500   # 最小静音时长（毫秒）
+
+# -----------------------------------------------------------------------------
+# 输出文件配置
+# -----------------------------------------------------------------------------
+output:
+  # 音频格式配置
+  format: "mp3"                    # 输出格式: mp3/wav/m4a/ogg/flac
+  sample_rate: 24000               # 采样率 Hz (8000/16000/22050/24000/44100/48000)
+  channels: 1                      # 声道数: 1=单声道 2=立体声
+  bitrate: "128k"                  # 比特率（MP3 有效）
+  
+  # 质量配置
+  quality: "high"                  # 输出质量: low/medium/high/ultra
+  
+  # 中间文件配置
+  keep_intermediate: false         # 保留中间文件（调试时设为 true）
+  intermediate_format: "wav"       # 中间文件格式: wav/flac
+  
+  # 输出目录
+  output_dir: "./output"           # 最终输出目录
+  temp_dir: "./temp"               # 临时文件目录
+
+# -----------------------------------------------------------------------------
+# 播客处理配置
+# -----------------------------------------------------------------------------
+podcast:
+  # 分句配置
+  max_sentence_length: 100         # 最大句子长度（字符）
+  min_sentence_length: 5           # 最小句子长度（字符）
+  
+  # 并发配置
+  max_concurrent_requests: 5       # 最大并发请求数 (1 ~ 20)
+  request_interval: 0.5            # 请求间隔秒数 (0 ~ 5)
+  
+  # 重试配置
+  retry_attempts: 3                # 重试次数 (1 ~ 10)
+  retry_delay: 1.0                 # 重试延迟秒数 (0 ~ 10)
+  
+  # 说话人映射配置
+  # 将 Whisper 识别的 SPEAKER_XX 映射到音色和情绪
+  speaker_mapping:
+    SPEAKER_00:
+      gender: "female"             # 性别: male/female
+      emotion: "neutral"           # 情绪标签
+      description: "主持人A"        # 描述（可选）
+    SPEAKER_01:
+      gender: "male"
+      emotion: "neutral"
+      description: "主持人B"
+    SPEAKER_02:
+      gender: "female"
+      emotion: "curious"
+      description: "嘉宾"
+  
+  # 默认音色配置（用于未映射的说话人）
+  default_speaker:
+    gender: "female"
+    emotion: "neutral"
+  
+  # 翻译/后处理配置
+  translation:
+    enabled: true                  # 启用翻译后处理
+    preserve_interjections: true   # 保留语气词（嗯、啊、这个等）
+    format_numbers: true           # 格式化数字为中文读法
+
+# -----------------------------------------------------------------------------
+# 开发调试配置
+# -----------------------------------------------------------------------------
+development:
+  # 调试模式
+  debug: false                     # 启用详细日志
+  save_transcript: true            # 保存中间文本文件
+  save_diarization: true           # 保存说话人分离结果
+  
+  # 性能监控
+  profile: false                   # 启用性能分析
+  log_api_calls: false             # 记录 API 调用详情
+  
+  # 测试配置
+  test_mode: false                 # 测试模式（限制处理时长）
+  test_max_duration: 60            # 测试模式最大处理时长（秒）
