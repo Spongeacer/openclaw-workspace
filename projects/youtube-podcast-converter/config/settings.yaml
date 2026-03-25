@@ -18,8 +18,8 @@ providers:
     max_retries: 3                 # 最大重试次数
     
     # 模型配置
-    chat_model: "step-1-8k"        # 对话模型（用于翻译/文本处理）
-    tts_model: "step-tts-mini"     # TTS 模型
+    chat_model: "step-2-16k"        # 对话模型（用于翻译/文本处理）
+    tts_model: "step-tts-mini"     # TTS 模型 (统一使用 mini 版本)
     
     # 音色池配置
     voice_pool:
@@ -189,9 +189,53 @@ podcast:
     format_numbers: true           # 格式化数字为中文读法
 
 # -----------------------------------------------------------------------------
-# 开发调试配置
+# TTS 引擎参数配置
 # -----------------------------------------------------------------------------
-development:
+tts_engine:
+  # 请求间隔和速率限制
+  min_interval: 6.0              # 最小请求间隔（秒）
+  max_retries: 3                 # 最大重试次数
+  text_max_length: 400           # 单次请求最大文本长度（字符）
+  
+  # QA 合成参数
+  add_qa_silence: 300            # QA 之间的静音时长（毫秒）
+  progress_save_interval: 5      # 每 N 个 QA 保存一次进度
+  
+  # 音频参数
+  sample_rate: 24000             # 采样率 Hz
+  channels: 1                    # 声道数 1=单声道
+  bitrate: "192k"                # 比特率
+
+# -----------------------------------------------------------------------------
+# 脚本运行时配置
+# -----------------------------------------------------------------------------
+scripts:
+  # regenerate_tts.py 配置
+  regenerate_tts:
+    # 默认使用最新的 pipeline 输出目录，留空则自动查找
+    default_work_dir: ""
+    qa_pairs_file: "qa_pairs_v2.json"
+    output_audio: "podcast_final_v2.mp3"
+    progress_file: "tts_progress_v2.json"
+  
+  # run_full_pipeline.py / run_pipeline_stages.py 配置
+  pipeline:
+    # 输入源配置
+    raw_mp3_source: ""           # 默认 raw.mp3 源路径，留空则使用工作目录
+    
+    # ASR 配置
+    asr_model: "FunAudioLLM/SenseVoiceSmall"
+    asr_language: "en"
+    asr_timeout: 600
+    
+    # 翻译配置
+    translator_model: "step-2-mini"
+    translation_batch_size: 10
+    
+    # 音色池（脚本级别覆盖）
+    voice_pool_override: {}      # 留空则使用 provider 配置
+
+# -----------------------------------------------------------------------------
   # 调试模式
   debug: false                     # 启用详细日志
   save_transcript: true            # 保存中间文本文件

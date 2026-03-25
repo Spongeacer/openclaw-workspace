@@ -82,7 +82,7 @@ class StepFunConfig(TTSProviderConfig):
     
     # 模型配置
     chat_model: str = Field(default="step-1-8k", description="对话模型")
-    tts_model: str = Field(default="step-tts-mini", description="TTS 模型")
+    tts_model: str = Field(default="step-tts-mini", description="TTS 模型 (统一使用 mini 版本)")
     
     # 音色池
     voice_pool: VoicePool = Field(default_factory=lambda: VoicePool(
@@ -185,7 +185,43 @@ class OutputConfig(BaseModel):
         return str(path.absolute())
 
 
-# ==================== 播客处理配置 ====================
+# ==================== TTS 引擎配置 ====================
+class TTSEngineConfig(BaseModel):
+    """TTS 引擎参数配置"""
+    min_interval: float = Field(default=6.0, ge=0.0, description="最小请求间隔（秒）")
+    max_retries: int = Field(default=3, ge=1, le=10, description="最大重试次数")
+    text_max_length: int = Field(default=400, ge=100, le=1000, description="单次请求最大文本长度")
+    add_qa_silence: int = Field(default=300, ge=0, le=1000, description="QA 之间的静音时长（毫秒）")
+    progress_save_interval: int = Field(default=5, ge=1, le=50, description="进度保存间隔（QA数）")
+    sample_rate: int = Field(default=24000, description="采样率 Hz")
+    channels: Literal[1, 2] = Field(default=1, description="声道数")
+    bitrate: str = Field(default="192k", description="比特率")
+
+
+# ==================== 脚本配置 ====================
+class RegenerateTTSConfig(BaseModel):
+    """regenerate_tts.py 配置"""
+    default_work_dir: str = Field(default="", description="默认工作目录")
+    qa_pairs_file: str = Field(default="qa_pairs_v2.json", description="QA 对文件名")
+    output_audio: str = Field(default="podcast_final_v2.mp3", description="输出音频文件名")
+    progress_file: str = Field(default="tts_progress_v2.json", description="进度文件名")
+
+
+class PipelineScriptConfig(BaseModel):
+    """pipeline 脚本配置"""
+    raw_mp3_source: str = Field(default="", description="默认 raw.mp3 源路径")
+    asr_model: str = Field(default="FunAudioLLM/SenseVoiceSmall", description="ASR 模型")
+    asr_language: str = Field(default="en", description="ASR 语言")
+    asr_timeout: int = Field(default=600, ge=60, le=3600, description="ASR 超时（秒）")
+    translator_model: str = Field(default="step-2-mini", description="翻译模型")
+    translation_batch_size: int = Field(default=10, ge=1, le=50, description="翻译批次大小")
+    voice_pool_override: Dict[str, Any] = Field(default_factory=dict, description="音色池覆盖")
+
+
+class ScriptsConfig(BaseModel):
+    """脚本运行时配置"""
+    regenerate_tts: RegenerateTTSConfig = Field(default_factory=RegenerateTTSConfig)
+    pipeline: PipelineScriptConfig = Field(default_factory=PipelineScriptConfig)
 class PodcastConfig(BaseModel):
     """播客处理配置"""
     # 分句配置
@@ -235,6 +271,7 @@ class Settings(BaseSettings):
     
     # API 密钥（优先从环境变量读取）
     stepfun_api_key: str = Field(default="", alias="STEPFUN_API_KEY")
+    siliconflow_api_key: str = Field(default="", alias="SILICONFLOW_API_KEY")
     minimax_api_key: str = Field(default="", alias="MINIMAX_API_KEY")
     
     # Whisper 模型路径
@@ -256,6 +293,8 @@ class Settings(BaseSettings):
     _whisper_config: Optional[WhisperConfig] = None
     _output_config: Optional[OutputConfig] = None
     _podcast_config: Optional[PodcastConfig] = None
+    _tts_engine_config: Optional[TTSEngineConfig] = None
+    _scripts_config: Optional[ScriptsConfig] = None
     
     def __init__(self, yaml_path: Optional[Path] = None, **kwargs):
         super().__init__(**kwargs)
@@ -279,6 +318,20 @@ class Settings(BaseSettings):
             return self._get_minimax_config()
         else:
             raise ValueError(f"Unknown provider: {self.active_provider}")
+    
+    def get_provider_config(self) -> Dict[str, Any]:
+        """获取当前激活的提供商配置（返回字典格式）"""
+        tts_config = self.get_tts_config()
+        return {
+            "api_key": tts_config.api_key,
+            "base_url": tts_config.base_url,
+            "chat_model": tts_config.chat_model,
+            "tts_model": tts_config.tts_model,
+            "voice_pool": {
+                "male": tts_config.voice_pool.male,
+                "female": tts_config.voice_pool.female
+            }
+        }
     
     def _get_stepfun_config(self) -> StepFunConfig:
         """获取 StepFun 配置（带缓存）"""
@@ -340,7 +393,32 @@ class Settings(BaseSettings):
             self._podcast_config = PodcastConfig(**podcast_data)
         return self._podcast_config
     
+    def get_tts_engine_config(self) -> TTSEngineConfig:
+        """获取 TTS 引擎配置"""
+        if self._tts_engine_config is None:
+            tts_engine_data = self._yaml_data.get("tts_engine", {})
+            self._tts_engine_config = TTSEngineConfig(**tts_engine_data)
+        return self._tts_engine_config
+    
+    def get_scripts_config(self) -> ScriptsConfig:
+        """获取脚本运行时配置"""
+        if self._scripts_config is None:
+            scripts_data = self._yaml_data.get("scripts", {})
+            self._scripts_config = ScriptsConfig(
+                regenerate_tts=RegenerateTTSConfig(**scripts_data.get("regenerate_tts", {})),
+                pipeline=PipelineScriptConfig(**scripts_data.get("pipeline", {}))
+            )
+        return self._scripts_config
+    
     # ==================== 快捷方法 ====================
+    
+    def get_voice_config(self) -> Dict[str, List[str]]:
+        """获取音色池配置"""
+        tts_config = self.get_tts_config()
+        return {
+            "voice_pool_male": tts_config.voice_pool.male,
+            "voice_pool_female": tts_config.voice_pool.female
+        }
     
     def get_voice_for_speaker(self, speaker_id: str) -> Dict[str, str]:
         """根据说话人 ID 获取音色配置"""
@@ -383,6 +461,8 @@ class Settings(BaseSettings):
         self._whisper_config = None
         self._output_config = None
         self._podcast_config = None
+        self._tts_engine_config = None
+        self._scripts_config = None
 
 
 # ==================== 全局实例 ====================

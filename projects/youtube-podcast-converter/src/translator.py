@@ -6,7 +6,11 @@ import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # 导入语音识别模块的数据类
-from .transcriber import Segment
+try:
+    from .transcriber import Segment
+except ImportError:
+    # 直接运行时的导入
+    from src.transcriber import Segment
 
 
 @dataclass
@@ -35,7 +39,7 @@ class StepFunTranslator:
         self, 
         api_key: str, 
         base_url: str = "https://api.stepfun.com/v1", 
-        model: str = "step-2-mini"
+        model: str = "step-2-16k"
     ):
         """
         初始化翻译器
@@ -66,16 +70,31 @@ class StepFunTranslator:
         # 组合文本，用分隔符标记
         combined = "\n---\n".join([f"[{i}] {t}" for i, t in enumerate(texts)])
         
-        system_prompt = """你是资深播客本地化专家。将英文译为地道中文口语：
-1. 去翻译腔：删除"那么"、"就是"，改用"其实"、"说白了"
-2. 每段前加 [情绪:xxx]，从[高兴/悲伤/生气/兴奋/困惑/惊讶/温柔/严肃/快速/慢速/中性]选
-3. 保留说话人上下文，确保翻译连贯
-4. 意译优先，传达情绪而非逐字翻译
-5. 如果原文是疑问句，译文也要是疑问句
+        system_prompt = """你是资深播客本地化专家。将英文译为地道自然的中文口语：
 
-格式示例：
+【翻译规则】
+1. 专业名词保留英文：Agent, OpenClaw, AI, LLM, GPT, API, GPU, TTS, ASR, Codex, Prompt, Token, Model, Lab, GitHub, Python, JavaScript, Web, App, Internet, Email, WhatsApp, FedEx, Adobe, Aquin 等
+2. 人名保留原文：Andrej Karpathy 不要译成 Andre Kpofi，No Priors 不要译成 Nopriers
+3. 以下翻译是错误的，必须避免：
+   - "Kpofi" ❌ → "Karpathy" ✅
+   - "Noprier" ❌ → "No Priors" ✅
+   - "Dobe" ❌ → "Adobe" ✅
+   - "Aquint" ❌ → "Aquin" ✅
+4. 口语化表达：
+   - "这非常有压力" → "这压力挺大的" 或 "挺焦虑的"
+   - "代币吞吐量" → "token 用量" 或 "调用量"
+   - "我脑子里确实有一些问题" → "我在想"
+   - "本质上是" → "说白了就是"
+5. 去翻译腔：删除"那么"、"就是"，改用"其实"、"说白了"、"怎么说呢"
+6. 每段前加 [情绪:xxx]，从[高兴/悲伤/生气/兴奋/困惑/惊讶/温柔/严肃/快速/慢速/中性]选
+7. 意译优先，传达情绪而非逐字翻译
+8. 疑问句保持疑问语气
+
+【格式示例】
 [情绪:严肃] 今天咱们要聊个严肃话题。
 [情绪:高兴] 哈哈，这太有意思了！
+[情绪:困惑] Agent 和 API 这俩到底啥区别？
+[情绪:兴奋] OpenClaw 这个功能真的太强了！
 
 待译内容："""
         
@@ -103,11 +122,30 @@ class StepFunTranslator:
         Returns:
             分段后的翻译结果
         """
-        # 按 --- 分隔
+        import re
+        
+        # 首先尝试按 [N] 标记分割（我们发送的格式）
+        # 格式: [0] 翻译文本 [1] 翻译文本 ...
+        indexed_pattern = re.compile(r'\[(\d+)\]\s*')
+        matches = list(indexed_pattern.finditer(result))
+        
+        if len(matches) >= expected_count:
+            # 按索引提取
+            parts = []
+            for i in range(len(matches)):
+                start = matches[i].end()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(result)
+                text = result[start:end].strip()
+                # 清理 --- 分隔符
+                text = text.rstrip('-').strip()
+                parts.append(text)
+            return parts[:expected_count]
+        
+        # 备选：按 --- 分隔
         parts = result.split("---")
         parts = [p.strip() for p in parts if p.strip()]
         
-        # 如果数量不匹配，尝试按行分割
+        # 如果数量不匹配，尝试按行分割，查找情绪标签
         if len(parts) != expected_count:
             lines = []
             for line in result.split("\n"):
@@ -116,6 +154,13 @@ class StepFunTranslator:
                 if line and ("[情绪:" in line or any(e in line for e in self.VALID_EMOTIONS)):
                     lines.append(line)
             parts = lines
+        
+        # 如果还是不够，尝试按数字编号分割
+        if len(parts) < expected_count:
+            numbered = re.split(r'\n\s*\d+[\.\)]\s*', result)
+            numbered = [p.strip() for p in numbered if p.strip() and len(p) > 10]
+            if len(numbered) >= expected_count:
+                parts = numbered
         
         # 补齐或截断到期望数量
         if len(parts) < expected_count:

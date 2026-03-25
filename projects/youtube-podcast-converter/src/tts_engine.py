@@ -1,229 +1,323 @@
-"""TTS 引擎与混音模块 - 调用 StepFun TTS API 生成立体声音频"""
+"""增强版 TTS 引擎 - 带重试和错误处理"""
 import io
+import json
 import random
 import requests
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 from pydub import AudioSegment
 from pydub.effects import normalize
 
-# 导入翻译模块的数据类
-from .translator import ChineseSegment
+try:
+    from .translator import ChineseSegment
+except ImportError:
+    from src.translator import ChineseSegment
 
 
 class StepFunTTS:
-    """StepFun TTS 引擎"""
+    """StepFun TTS 引擎 - 增强版"""
     
     def __init__(
         self, 
         api_key: str, 
         voice_config: Dict,
         base_url: str = "https://api.stepfun.com/v1",
-        model: str = "step-tts-2",
-        sample_rate: int = 44100
+        model: str = "step-tts-mini",
+        sample_rate: int = 24000,
+        default_speed: float = 1.5,
+        min_interval: float = 6.0,  # 最小间隔 6 秒
+        max_retries: int = 3,
+        text_max_length: int = 500  # 最大文本长度
     ):
-        """
-        初始化 TTS 引擎
-        
-        Args:
-            api_key: StepFun API 密钥
-            voice_config: 音色配置（voice_pool_male/female）
-            base_url: API 基础 URL
-            model: TTS 模型名称
-            sample_rate: 输出采样率
-        """
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.sample_rate = sample_rate
         self.voice_config = voice_config
+        self.default_speed = default_speed
+        self.min_interval = min_interval
+        self.max_retries = max_retries
+        self.text_max_length = text_max_length
+        self.last_request_time = 0
         
-        # 随机分配音色（实例化时确定，确保整段音频音色一致）
-        self.voice_map = self._random_assign_voices()
-    
-    def _random_assign_voices(self) -> Dict[str, str]:
-        """
-        为说话人随机分配音色
+        # 音色映射
+        self.voice_map = self._assign_voices()
         
-        Returns:
-            说话人到音色的映射
-        """
-        male_voices = self.voice_config.get("voice_pool_male", ["zixinnansheng"])
-        female_voices = self.voice_config.get("voice_pool_female", ["elegantgentle-female"])
-        
-        male_voice = random.choice(male_voices)
-        female_voice = random.choice(female_voices)
-        
-        # SPEAKER_00 使用男声，SPEAKER_01 使用女声
-        # 其他说话人随机分配
-        return {
-            "SPEAKER_00": male_voice,
-            "SPEAKER_01": female_voice,
-            "DEFAULT": male_voice
+        # 统计
+        self.stats = {
+            "success": 0,
+            "failed": 0,
+            "retried": 0
         }
     
-    def _emotion_to_voice_label(self, emotion: str) -> Dict[str, str]:
-        """
-        将情绪映射为 StepFun voice_label
+    def _assign_voices(self) -> Dict[str, str]:
+        """分配音色"""
+        male_voices = self.voice_config.get("voice_pool_male", ["cixingnansheng"])
+        female_voices = self.voice_config.get("voice_pool_female", ["elegantgentle-female"])
         
-        Args:
-            emotion: 情绪标签
-            
-        Returns:
-            voice_label 字典
-        """
-        emotion_tags = ["高兴", "悲伤", "生气", "兴奋", "困惑", "惊讶", "中性"]
-        style_tags = ["温柔", "严肃", "快速", "慢速"]
-        
-        label = {}
-        if emotion in emotion_tags:
-            label["emotion"] = emotion
-        elif emotion in style_tags:
-            label["style"] = emotion
-        
-        return label
+        return {
+            "SPEAKER_00": male_voices[0],
+            "SPEAKER_01": female_voices[0],
+            "DEFAULT": male_voices[0]
+        }
     
-    def _get_speed(self, emotion: str) -> float:
-        """
-        根据情绪获取语速
-        
-        Args:
-            emotion: 情绪标签
-            
-        Returns:
-            语速倍数
-        """
-        if emotion == "快速":
-            return 1.1
-        elif emotion == "慢速":
-            return 0.9
-        return 1.0
+    def _wait_rate_limit(self):
+        """等待速率限制"""
+        elapsed = time.time() - self.last_request_time
+        if elapsed < self.min_interval:
+            sleep_time = self.min_interval - elapsed
+            print(f"  ⏳ 等待 {sleep_time:.1f}s (速率限制)...")
+            time.sleep(sleep_time)
+        self.last_request_time = time.time()
     
-    def synthesize_segment(self, segment: ChineseSegment) -> AudioSegment:
-        """
-        合成单段音频
+    def _split_text(self, text: str) -> List[str]:
+        """切分超长文本"""
+        if len(text) <= self.text_max_length:
+            return [text]
         
-        Args:
-            segment: 中文语音片段
-            
-        Returns:
-            pydub AudioSegment
-        """
-        # 获取音色
-        voice_id = self.voice_map.get(segment.speaker, self.voice_map["DEFAULT"])
+        # 按句子切分
+        import re
+        sentences = re.split(r'(?<=[。！？；.!?;])\s*', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
         
-        # 获取 voice_label
-        voice_label = self._emotion_to_voice_label(segment.emotion)
+        parts = []
+        current = ""
         
-        # 获取语速
-        speed = self._get_speed(segment.emotion)
+        for sent in sentences:
+            if len(current) + len(sent) < self.text_max_length:
+                current += sent
+            else:
+                if current:
+                    parts.append(current)
+                current = sent
         
-        # 构建请求
+        if current:
+            parts.append(current)
+        
+        return parts if parts else [text[:self.text_max_length]]
+    
+    def _call_tts_api(self, text: str, voice_id: str, emotion: str) -> Optional[bytes]:
+        """调用 TTS API，带重试"""
+        speed = self._get_speed(emotion)
+        
+        # 构建 payload
         payload = {
             "model": self.model,
-            "input": segment.text,
-            "voice_id": voice_id,
+            "input": text,
+            "voice": voice_id,
             "audio_format": "mp3",
             "sample_rate": self.sample_rate,
             "speed": speed
         }
-        
-        # 添加 voice_label（如果有）
-        if voice_label:
-            payload["voice_label"] = voice_label
         
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         
-        # 发送请求
-        response = requests.post(
-            f"{self.base_url}/audio/speech",
-            json=payload,
-            headers=headers,
-            timeout=60
-        )
-        response.raise_for_status()
+        for attempt in range(self.max_retries):
+            try:
+                self._wait_rate_limit()
+                
+                response = requests.post(
+                    f"{self.base_url}/audio/speech",
+                    json=payload,
+                    headers=headers,
+                    timeout=60
+                )
+                
+                # 处理 429 速率限制
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 30))
+                    print(f"  ⚠️ 速率限制，等待 {retry_after}s...")
+                    time.sleep(retry_after)
+                    self.stats["retried"] += 1
+                    continue
+                
+                # 处理 400 错误
+                if response.status_code == 400:
+                    error_detail = response.text
+                    print(f"  ⚠️ 400 错误: {error_detail[:200]}")
+                    # 可能是文本太长，尝试切分
+                    if len(text) > 200 and attempt < self.max_retries - 1:
+                        print(f"  🔄 文本可能过长，重试...")
+                        self.stats["retried"] += 1
+                        continue
+                    return None
+                
+                response.raise_for_status()
+                return response.content
+                
+            except requests.exceptions.Timeout:
+                print(f"  ⚠️ 超时，重试 ({attempt+1}/{self.max_retries})...")
+                self.stats["retried"] += 1
+                time.sleep(5)
+            except Exception as e:
+                print(f"  ⚠️ 错误: {e}，重试 ({attempt+1}/{self.max_retries})...")
+                self.stats["retried"] += 1
+                time.sleep(5)
         
-        # 流式读取音频数据
-        audio_data = io.BytesIO(response.content)
-        segment_audio = AudioSegment.from_mp3(audio_data)
+        return None
+    
+    def _get_speed(self, emotion: str) -> float:
+        """根据情绪获取语速"""
+        speed_map = {
+            "快速": 1.8,
+            "兴奋": 1.6,
+            "高兴": 1.4,
+            "生气": 1.4,
+            "中性": 1.2,
+            "困惑": 1.0,
+            "悲伤": 0.9,
+            "温柔": 0.9,
+            "慢速": 0.8
+        }
+        return speed_map.get(emotion, 1.2)
+    
+    def synthesize_segment(self, segment: ChineseSegment) -> AudioSegment:
+        """合成单个段落"""
+        voice_id = self.voice_map.get(segment.speaker, self.voice_map["DEFAULT"])
         
+        # 切分长文本
+        text_parts = self._split_text(segment.text)
+        audio_parts = []
+        
+        for part in text_parts:
+            audio_data = self._call_tts_api(part, voice_id, segment.emotion)
+            if audio_data:
+                audio = AudioSegment.from_mp3(io.BytesIO(audio_data))
+                audio_parts.append(audio)
+        
+        if not audio_parts:
+            self.stats["failed"] += 1
+            # 返回静音
+            return AudioSegment.silent(duration=100, frame_rate=self.sample_rate)
+        
+        # 合并多个部分
+        combined = audio_parts[0]
+        for audio in audio_parts[1:]:
+            combined += audio
+        
+        # 后处理
+        combined = self._post_process(combined)
+        self.stats["success"] += 1
+        
+        return combined
+    
+    def _post_process(self, audio: AudioSegment) -> AudioSegment:
+        """音频后处理"""
         # 标准化采样率
-        if segment_audio.frame_rate != self.sample_rate:
-            segment_audio = segment_audio.set_frame_rate(self.sample_rate)
+        if audio.frame_rate != self.sample_rate:
+            audio = audio.set_frame_rate(self.sample_rate)
         
-        # 标准化声道数（转为单声道后再处理）
-        if segment_audio.channels > 1:
-            segment_audio = segment_audio.set_channels(1)
+        # 转为单声道
+        if audio.channels > 1:
+            audio = audio.set_channels(1)
         
         # 音量归一化
-        segment_audio = normalize(segment_audio)
+        audio = normalize(audio)
         
-        # 声道映射
-        if segment.speaker == "SPEAKER_00":
-            return segment_audio.pan(-1.0)  # 全左声道
-        elif segment.speaker == "SPEAKER_01":
-            return segment_audio.pan(1.0)   # 全右声道
-        else:
-            # 其他说话人居中
-            return segment_audio.pan(0.0)
+        return audio
     
-    def mix_stereo(
-        self, 
-        segments: List[ChineseSegment], 
-        output_path: Path
+    def synthesize_qa_pairs(
+        self,
+        qa_pairs: List,
+        output_path: Path,
+        progress_file: Optional[Path] = None,
+        add_qa_silence: int = 300
     ) -> Path:
         """
-        合成所有段落并混音为立体声
+        合成 QA 对，支持断点续传
         
         Args:
-            segments: 中文语音片段列表
-            output_path: 输出文件路径
-            
-        Returns:
-            输出文件路径
+            qa_pairs: QA 对列表
+            output_path: 输出路径
+            progress_file: 进度文件路径（用于断点续传）
+            add_qa_silence: Q-A 间隔（毫秒）
         """
-        if not segments:
-            raise ValueError("No segments to synthesize")
+        # 加载进度
+        completed = set()
+        if progress_file and progress_file.exists():
+            with open(progress_file, 'r') as f:
+                data = json.load(f)
+                completed = set(data.get('completed', []))
+            print(f"🔄 恢复进度: {len(completed)}/{len(qa_pairs)} 已完成")
         
-        # 计算总时长（取最后一个 segment 的 end 时间）
-        # 由于没有原始时间戳，我们按顺序拼接
-        mixed = AudioSegment.silent(duration=0, frame_rate=self.sample_rate)
-        mixed = mixed.set_channels(2)  # 强制立体声
+        # 创建或加载音频
+        if progress_file and output_path.exists() and completed:
+            mixed = AudioSegment.from_mp3(output_path)
+            # 计算当前时间点
+            current_time = len(mixed)
+        else:
+            mixed = None
+            current_time = 0
         
-        # 当前时间点（毫秒）
-        current_time = 0
+        total = len(qa_pairs)
         
-        for i, seg in enumerate(segments):
-            try:
-                # 合成音频
-                audio = self.synthesize_segment(seg)
-                
-                # 混合到当前时间点
-                mixed = mixed.overlay(audio, position=current_time)
-                
-                # 更新时间点（添加小段间隔，模拟自然对话停顿）
-                current_time += len(audio) + 200  # 200ms 间隔
-                
-            except Exception as e:
-                # 单段失败记录日志，继续处理
-                print(f"TTS 失败 for {seg.speaker}: {seg.text[:30]}... Error: {e}")
+        for i, pair in enumerate(qa_pairs):
+            if i in completed:
                 continue
+            
+            print(f"\n[{i+1}/{total}] 合成 QA 对...")
+            
+            # 合成 Q
+            print(f"  Q: {pair.question[:50]}...")
+            q_seg = ChineseSegment(
+                speaker=pair.q_speaker,
+                text=pair.question,
+                emotion=pair.q_emotion
+            )
+            q_audio = self.synthesize_segment(q_seg)
+            
+            # 合成 A
+            print(f"  A: {pair.answer[:50]}...")
+            a_seg = ChineseSegment(
+                speaker=pair.a_speaker,
+                text=pair.answer,
+                emotion=pair.a_emotion
+            )
+            a_audio = self.synthesize_segment(a_seg)
+            
+            # 使用拼接而非 overlay
+            if mixed is None:
+                mixed = q_audio
+            else:
+                mixed = mixed + q_audio
+            
+            # 添加 Q-A 间隔
+            if add_qa_silence > 0:
+                mixed = mixed + AudioSegment.silent(duration=add_qa_silence, frame_rate=self.sample_rate)
+            
+            mixed = mixed + a_audio
+            
+            # 添加段落间隔
+            mixed = mixed + AudioSegment.silent(duration=200, frame_rate=self.sample_rate)
+            
+            # 保存进度
+            completed.add(i)
+            if progress_file:
+                with open(progress_file, 'w') as f:
+                    json.dump({
+                        'completed': list(completed),
+                        'last_index': i,
+                        'stats': self.stats
+                    }, f)
+            
+            # 每 5 个保存一次音频
+            if (i + 1) % 5 == 0:
+                mixed.export(output_path, format="mp3", bitrate="192k")
+                print(f"  💾 已保存中间文件")
         
-        # 导出
-        output_path = Path(output_path)
+        # 最终导出
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        mixed.export(output_path, format="mp3", bitrate="192k")
         
-        mixed.export(
-            output_path,
-            format="mp3",
-            bitrate="192k",
-            tags={
-                'artist': 'AI Podcast Converter',
-                'title': 'Converted Chinese Podcast'
-            }
-        )
+        print(f"\n{'='*50}")
+        print(f"✅ TTS 完成!")
+        print(f"   成功: {self.stats['success']}")
+        print(f"   失败: {self.stats['failed']}")
+        print(f"   重试: {self.stats['retried']}")
+        print(f"{'='*50}")
         
         return output_path
